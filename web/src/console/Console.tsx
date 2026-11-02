@@ -1,5 +1,5 @@
-// Mission Control: the judges' live demo. Left — the real in-car app inside a Pleos
-// Connect-S head unit, plus the route map. Right — the cabin digital twin, explainable
+// Mission Control: the judges' live demo. Left · the real in-car app inside a Pleos
+// Connect-S head unit, plus the route map. Right · the cabin digital twin, explainable
 // fatigue model, and a live trace of the Pleos SDK calls the app makes.
 
 import { lazy, Suspense, useEffect } from 'react'

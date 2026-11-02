@@ -1,6 +1,6 @@
-// Fleet Safety Console (B2B): a logistics company's safety manager watching every truck
-// that runs KKAEUM. Every vehicle is a real, independent engine instance — its own
-// SimVehicle, FatigueModel, rest planner and orchestrator — driven by one shared clock.
+// Fleet Safety Console (B2B): a corporate-car / rental fleet safety manager watching every
+// Pleos Connect passenger car that runs KKAEUM. Every vehicle is a real, independent engine instance · its own
+// SimVehicle, FatigueModel, rest planner and orchestrator · driven by one shared clock.
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, animate, motion } from 'framer-motion'
@@ -14,14 +14,14 @@ import { ROUTE } from '../engine/route'
 import type { RestStop, RiskLevel, TimelineEvent } from '../engine/types'
 import { REST_STOPS } from '../data/stops'
 import { LEVEL, clock, dur, kssColor } from '../ui/format'
-import { IcAlert, IcCheck, IcPause, IcPlay, IcTruck, Logo } from '../ui/icons'
+import { IcAlert, IcCheck, IcPause, IcPlay, IcCar, Logo } from '../ui/icons'
 import './fleet.css'
 
 // ─── Simulation ──────────────────────────────────────────────────────────────
 
 const FLEET_SIZE = 24
-const COMPANY = '한빛로지스'
-const LIMIT_MIN = 120 // 화물자동차 운수사업법: 2시간 연속운전 후 15분 휴식
+const COMPANY = '한빛모빌리티'
+const LIMIT_MIN = 120 // 회사 안전정책: 2시간 연속운전마다 15분 휴식 (고속도로 휴식 권장 기준 준용)
 const STEP_MS = 10_000 // Runtime sub-step
 const AVG_KPH = 95
 
@@ -38,8 +38,8 @@ function mulberry32(seed: number) {
   }
 }
 
-const REGIONS = ['경기', '경기', '경기', '서울', '인천', '충북', '충남', '대전', '경북', '부산', '경남']
-const PLATE_LETTERS = ['바', '사', '아', '자'] // 사업용(영업용) 화물 번호판 용도기호
+const RENTAL_LETTERS = ['하', '허', '호'] // 대여사업용(렌터카) 번호판 용도기호
+const CORP_LETTERS = ['가', '나', '다', '라', '마', '거', '너', '더', '러', '머', '고', '노', '도', '로', '모'] // 자가용(법인 명의)
 const SURNAMES = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '한', '오', '서', '신', '권', '황', '송', '전', '홍', '문']
 
 export interface FeedItem {
@@ -75,7 +75,7 @@ export interface Truck {
   seen: WeakSet<TimelineEvent>
 }
 
-/** Fleet clock starts at 04:10 today — the circadian trough where night line-haul drivers are most at risk. */
+/** Fleet clock starts at 04:10 today · the circadian trough where night line-haul drivers are most at risk. */
 function fleetEpoch() {
   const d = new Date()
   d.setHours(4, 10, 0, 0)
@@ -89,7 +89,7 @@ class FleetSim {
   private rnd: () => number
   private serial = 0
   private feedSeq = 0
-  /** Day totals — survive vehicle re-dispatch. */
+  /** Day totals · survive vehicle re-dispatch. */
   totals = { trips: 0, violatedTrips: 0, rests: 0, accepted: 0, declined: 0, prevented: 0, dispatches: 0 }
 
   constructor(seed = 20261103) {
@@ -103,18 +103,18 @@ class FleetSim {
 
   private plate() {
     const r = this.rnd
-    const region = REGIONS[Math.floor(r() * REGIONS.length)]
-    const cls = 80 + Math.floor(r() * 20)
-    const letter = PLATE_LETTERS[Math.floor(r() * PLATE_LETTERS.length)]
+    const cls = 100 + Math.floor(r() * 600)
+    const pool = r() < 0.6 ? RENTAL_LETTERS : CORP_LETTERS
+    const letter = pool[Math.floor(r() * pool.length)]
     const num = 1000 + Math.floor(r() * 9000)
-    return `${region} ${cls}${letter} ${num}`
+    return `${cls}${letter} ${num}`
   }
 
   /** Create one truck. `hoursAgo` > 0 replays its trip from departure to `now` so its state is earned, not mocked. */
   private makeTruck(slot: string, hoursAgo: number, startKm: number): Truck {
     const r = this.rnd
     const departedAt = this.now - Math.round(hoursAgo * 360) * STEP_MS
-    const sleepHours = 4 + Math.pow(r(), 1.5) * 4 // 4–8 h, skewed short (night line-haul)
+    const sleepHours = 4 + Math.pow(r(), 1.5) * 4 // 4–8 h, skewed short (dawn business trips)
     const awakeBefore = 1 + r() * 9 // some slept right before departure, some have been up since the afternoon
     const reluctance = r() < 0.6 ? 0 : 0.3 + r() * 0.4
     const scenario: ScenarioConfig = {
@@ -173,7 +173,7 @@ class FleetSim {
         truck.declined++
         this.totals.declined++
         rt.declineProposal()
-        this.push(truck, { t: rt.bus.read().t, level: Math.max(2, truck.snap.est.level) as RiskLevel, kind: 'decline', title: `휴식 제안 거절 · ${p.stop.name}`, detail: `KSS ${truck.snap.est.kss.toFixed(1)} · 운행 계속 — 깨움이 다음 쉼터로 재계획합니다` })
+        this.push(truck, { t: rt.bus.read().t, level: Math.max(2, truck.snap.est.level) as RiskLevel, kind: 'decline', title: `휴식 제안 거절 · ${p.stop.name}`, detail: `KSS ${truck.snap.est.kss.toFixed(1)} · 운행 계속 · 깨움이 다음 쉼터로 재계획합니다` })
         return
       }
       truck.accepted++
@@ -199,7 +199,7 @@ class FleetSim {
     const i = this.trucks.length
     const r = this.rnd
     const hoursAgo = 0.05 + r() * 3.95
-    const startKm = r() < 0.7 ? 0 : r() * Math.max(0, 390 - hoursAgo * AVG_KPH) // 군포 허브 or 중간 허브(대전·옥천) 출발
+    const startKm = r() < 0.7 ? 0 : r() * Math.max(0, 390 - hoursAgo * AVG_KPH) // 서울 출발 or 중간 지점(대전 지사 등) 출발
     this.trucks.push(this.makeTruck(`T${String(i + 1).padStart(2, '0')}`, hoursAgo, Math.min(startKm, Math.max(0, 390 - hoursAgo * AVG_KPH))))
   }
 
@@ -209,11 +209,11 @@ class FleetSim {
     for (let i = 0; i < this.trucks.length; i++) {
       const tr = this.trucks[i]
       if (tr.arrivedAt !== null) {
-        // Unload ~40 min at the Busan terminal, then the slot is re-dispatched from the Gunpo hub.
+        // ~40 min on site in Busan, then the slot is re-dispatched to a new trip from Seoul HQ.
         if (this.now - tr.arrivedAt > 40 * 60_000) {
           const next = this.makeTruck(tr.id, 0, 0)
           this.trucks[i] = next
-          this.push(next, { t: this.now, level: 0, kind: 'trip', title: '신규 배차 · 군포 허브 출발', detail: `${next.driver} 기사 · 수면 ${next.sleepHours.toFixed(1)}h 자가신고` })
+          this.push(next, { t: this.now, level: 0, kind: 'trip', title: '신규 출장 배차 · 서울 본사 출발', detail: `${next.driver} 님 · 수면 ${next.sleepHours.toFixed(1)}h 자가신고` })
         }
         continue
       }
@@ -234,14 +234,14 @@ class FleetSim {
     if (tot > LIMIT_MIN && !tr.violated) {
       tr.violated = true
       this.totals.violatedTrips++
-      this.push(tr, { t, level: 3, kind: 'violation', title: '연속운전 2시간 초과', detail: `휴식 없이 ${Math.round(tot)}분 운행 — 운수사업법 휴게시간 규정 위반` })
+      this.push(tr, { t, level: 3, kind: 'violation', title: '연속운전 2시간 초과', detail: `휴식 없이 ${Math.round(tot)}분 운행 · 회사 안전정책(2시간마다 15분 휴식) 미준수` })
     }
     const rest = tr.rt.fatigue.restMin
     if (tr.prevRest < 15 && rest >= 15) {
       tr.rests++
       this.totals.rests++
       tr.regSent = false
-      this.push(tr, { t, level: 0, kind: 'rest', title: '15분 휴식 충족 · 연속운전 리셋', detail: `${regionAt(tr.sim.km)} 정차 — 운수사업법 휴게시간 요건 충족` })
+      this.push(tr, { t, level: 0, kind: 'rest', title: '15분 휴식 충족 · 연속운전 리셋', detail: `${regionAt(tr.sim.km)} 정차 · 안전정책 휴식 요건 충족` })
     }
     tr.prevRest = rest
     // Fleet-side regulation guard: the engine proposes rest on predicted sleepiness; for commercial
@@ -255,16 +255,16 @@ class FleetSim {
       if (stop) {
         tr.regSent = true
         this.totals.dispatches++
-        const title = `관제 규정 휴식 안내 · ${stop.name}`
-        const detail = `연속운전 ${Math.round(tot)}분 — 2시간 도달 전 15분 휴식 경유지를 Pleos Fleet에서 전송했습니다.`
-        rt.execute({ t, level: 1, title, detail, actions: [{ kind: 'waypoint', value: { stop, needsConfirm: true }, reason: '화물자동차 운수사업법 휴게시간' }] })
+        const title = `관제 정책 휴식 안내 · ${stop.name}`
+        const detail = `연속운전 ${Math.round(tot)}분, 2시간 도달 전 15분 휴식 경유지를 Pleos Fleet에서 전송했습니다.`
+        rt.execute({ t, level: 1, title, detail, actions: [{ kind: 'waypoint', value: { stop, needsConfirm: true }, reason: '회사 안전정책 · 2시간마다 15분 휴식' }] })
         this.push(tr, { t, level: 1, kind: 'dispatch', title, detail })
       }
     }
     if (tot < 30) tr.regSent = false
     if (tr.sim.km >= ROUTE.totalKm - 0.3 && tr.arrivedAt === null) {
       tr.arrivedAt = t
-      this.push(tr, { t, level: 0, kind: 'trip', title: '운행 완료 · 부산 신항 도착', detail: `운행 ${dur((t - tr.departedAt) / 60000)} · 최대 연속운전 ${Math.round(tr.maxTot)}분` })
+      this.push(tr, { t, level: 0, kind: 'trip', title: '운행 완료 · 부산 사업장 도착', detail: `운행 ${dur((t - tr.departedAt) / 60000)} · 최대 연속운전 ${Math.round(tr.maxTot)}분` })
     }
   }
 
@@ -674,7 +674,7 @@ function VehiclePanel({ tr }: { tr: Truck | undefined }) {
         <div>
           <div className="eyebrow">선택 차량 · {tr.id}</div>
           <h3>
-            {tr.plate} <span>{tr.driver} 기사</span>
+            {tr.plate} <span>{tr.driver} 님</span>
           </h3>
         </div>
         <div className="fl-dh-chips">
@@ -708,7 +708,7 @@ function VehiclePanel({ tr }: { tr: Truck | undefined }) {
         </div>
         <div>
           <span>다음 휴식</span>
-          <b>{nr ? shortStop(nr.stop) : '—'}</b>
+          <b>{nr ? shortStop(nr.stop) : '-'}</b>
           <em>{nr ? `${nr.state} · ${clock(s.sig.t + nr.etaMin * 60_000)}` : st === 'arrived' ? '운행 종료' : st !== 'driving' ? '휴식 중' : ''}</em>
         </div>
       </div>
@@ -730,7 +730,7 @@ function VehiclePanel({ tr }: { tr: Truck | undefined }) {
         최근 개입 <span>깨움 오케스트레이터</span>
       </div>
       <ol className="fl-iv">
-        {recent.length === 0 && <li className="fl-empty">아직 개입 없음 — 각성 상태 양호</li>}
+        {recent.length === 0 && <li className="fl-empty">아직 개입 없음 · 각성 상태 양호</li>}
         {recent.map((e, i) => (
           <li key={`${e.t}-${i}`}>
             <span className="t num">{clock(e.t)}</span>
@@ -750,7 +750,7 @@ function VehiclePanel({ tr }: { tr: Truck | undefined }) {
 
 type SortKey = 'plate' | 'km' | 'tot' | 'kss' | 'eta'
 const SORTS: { key: SortKey; label: string }[] = [
-  { key: 'plate', label: '차량 · 기사' },
+  { key: 'plate', label: '차량 · 운전자' },
   { key: 'km', label: '현재 위치' },
   { key: 'tot', label: '연속운전' },
   { key: 'kss', label: 'KSS 추이' },
@@ -801,7 +801,7 @@ function VehicleList({ trucks, selected, onSelect }: { trucks: Truck[]; selected
           <h2>실시간 운행 차량</h2>
         </div>
         <span className="chip">
-          <IcTruck size={14} /> {trucks.length}대 · 경부선 서울→부산
+          <IcCar size={14} /> {trucks.length}대 · 경부선 서울→부산
         </span>
       </header>
       <div className="fl-thead" role="row">
@@ -868,7 +868,7 @@ function VehicleList({ trucks, selected, onSelect }: { trucks: Truck[]; selected
                     </em>
                   </>
                 ) : (
-                  <em>{st === 'arrived' ? '하차 중' : st === 'nap' ? '파워냅 중' : st === 'rest' ? '정차 휴식 중' : '—'}</em>
+                  <em>{st === 'arrived' ? '현장 업무 중' : st === 'nap' ? '파워냅 중' : st === 'rest' ? '정차 휴식 중' : '-'}</em>
                 )}
               </span>
               <span className="c-lv">
@@ -947,7 +947,7 @@ function AlertFeed({ feed, onSelect }: { feed: FeedItem[]; onSelect: (id: string
 // ─── CSV export ──────────────────────────────────────────────────────────────
 
 function exportCsv(fleet: FleetSim) {
-  const head = ['차량번호', '기사', '상태', '위험단계', 'KSS', '위치_km', '구간', '속도_kph', '연속운전_분', '최대연속운전_분', '2시간규정', '휴식이행_회', '휴식제안수락_건', '휴식제안거절_건', '예방_건', '다음휴식', '다음휴식_ETA', '개입_건', '실내CO2_ppm']
+  const head = ['차량번호', '운전자', '상태', '위험단계', 'KSS', '위치_km', '구간', '속도_kph', '연속운전_분', '최대연속운전_분', '2시간정책', '휴식이행_회', '휴식제안수락_건', '휴식제안거절_건', '예방_건', '다음휴식', '다음휴식_ETA', '개입_건', '실내CO2_ppm']
   const rows = fleet.trucks.map((tr) => {
     const s = tr.snap
     const km = s.sig.routeProgressKm ?? 0
@@ -1063,10 +1063,10 @@ export function Fleet() {
           <Logo size={30} />
           <div>
             <div className="eyebrow">
-              {COMPANY} · 간선 화물 {FLEET_SIZE}대 · KKAEUM for Fleet
+              {COMPANY} · 법인·장기렌터카 {FLEET_SIZE}대 · KKAEUM for Fleet
             </div>
             <h1>Fleet Safety Console</h1>
-            <p>Pleos Fleet 연동 · 사업용 차량 졸음운전 관리 (화물자동차 운수사업법: 2시간 연속운전 후 15분 휴식)</p>
+            <p>Pleos Fleet 연동 · 법인·렌터카 승용 플릿 졸음운전 관리 (안전정책: 2시간 연속운전마다 15분 휴식 · 정책값은 고객사별 설정)</p>
           </div>
         </div>
         <nav className="fl-nav">
@@ -1112,7 +1112,7 @@ export function Fleet() {
       ) : (
         <>
           <div className="fl-kpis">
-            <Kpi label="운행 중 차량" icon={<IcTruck size={13} />} sub={<>주행 {driving} · 휴식 {resting} · 도착 {trucks.length - active.length}</>}>
+            <Kpi label="운행 중 차량" icon={<IcCar size={13} />} sub={<>주행 {driving} · 휴식 {resting} · 도착 {trucks.length - active.length}</>}>
               <Num value={active.length} />
               <small>/{trucks.length}</small>
             </Kpi>
@@ -1120,7 +1120,7 @@ export function Fleet() {
               <Num value={risk.length} />
               <small>대</small>
             </Kpi>
-            <Kpi label="2시간 연속운전 준수율" tone={compliance < 0.9 ? 'var(--amber)' : 'var(--aurora)'} sub={<>오늘 {trips}회 운행 중 위반 {violatedTrips} · 15분 휴식 {rests}회</>}>
+            <Kpi label="2시간 휴식정책 준수율" tone={compliance < 0.9 ? 'var(--amber)' : 'var(--aurora)'} sub={<>오늘 {trips}회 운행 중 위반 {violatedTrips} · 15분 휴식 {rests}회</>}>
               <Num value={compliance * 100} digits={1} suffix="%" />
             </Kpi>
             <Kpi label="오늘 예방된 위험 구간" tone="var(--aurora)" icon={<IcCheck size={13} />} sub={<>KSS 7 전 휴식 수락 · 수락 {accepted} · 거절 {declined}</>}>
@@ -1162,7 +1162,7 @@ export function Fleet() {
           </div>
 
           <footer className="fl-foot">
-            각 차량은 독립된 깨움 엔진(3-프로세스 졸음 모델 · CO₂ 디지털 트윈 · 예측 휴식 플래너 · 개입 오케스트레이터)으로 시뮬레이션됩니다. 기사 정보는 이니셜만
+            각 차량은 독립된 깨움 엔진(3-프로세스 졸음 모델 · CO₂ 디지털 트윈 · 예측 휴식 플래너 · 개입 오케스트레이터)으로 시뮬레이션됩니다. 운전자 정보는 성만
             표시합니다.
           </footer>
         </>

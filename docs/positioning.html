@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>KKAEUM Positioning</title>
+<style>
+@font-face{font-family:P;src:url('../web/public/fonts/PretendardVariable.woff2')}
+*{box-sizing:border-box}body{margin:0;background:#fff;font-family:P,sans-serif;color:#141a24}
+.w{width:1600px;padding:34px 40px 30px}
+h2{margin:0;font-size:30px;letter-spacing:-.02em}
+h2 em{font-style:normal;color:#0f7c6e}
+.sub{margin:6px 0 22px;color:#566375;font-size:17px}
+.g{display:grid;grid-template-columns:1.15fr 1fr;gap:26px}
+.card{border:1.5px solid #d6e2e6;border-radius:18px;padding:18px 20px;background:#f7fafb}
+.card h3{margin:0 0 10px;font-size:14px;letter-spacing:.12em;color:#0f7c6e;text-transform:uppercase}
+svg text{font-family:P}
+table{width:100%;border-collapse:separate;border-spacing:0 8px}
+td{vertical-align:top;font-size:15px;line-height:1.45;padding:10px 12px;background:#fff;border-top:1px solid #e3ebee;border-bottom:1px solid #e3ebee}
+td:first-child{border-left:1px solid #e3ebee;border-radius:12px 0 0 12px;width:31%}
+td:last-child{border-right:1px solid #e3ebee;border-radius:0 12px 12px 0}
+td b{display:block;font-size:16px}
+td small{color:#6b7787;font-size:13px}
+.k{color:#0f7c6e;font-weight:700}
+.core{margin-top:12px;border-radius:14px;padding:14px 16px;background:linear-gradient(135deg,#0b1f26,#10333a);color:#dffbf5;font-size:15.5px;line-height:1.5}
+.core b{color:#3cf2c8}
+</style></head><body><div class="w">
+<h2>깨움은 DAW·CO₂ 자동 환기를 <em>대체하지 않는다.</em> 그 위에서 <em>먼저</em> 움직이는 예측·오케스트레이션 계층</h2>
+<p class="sub">기존 기능은 “임계값을 넘은 뒤” 반응합니다. 깨움은 그 신호들을 입력으로 받아, 넘기 “전에” 공조·조명·시트·내비를 한 흐름으로 움직입니다.</p>
+<div class="g">
+<div class="card"><h3>개입 시점 비교 · 새벽 귀성길 시뮬레이션</h3>
+<svg viewBox="0 0 760 335" width="100%">
+ <defs><linearGradient id="k" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#3CF2C8"/><stop offset=".55" stop-color="#FFD04A"/><stop offset=".8" stop-color="#FF9A3C"/><stop offset="1" stop-color="#FF3B4F"/></linearGradient></defs>
+ <rect x="60" y="20" width="680" height="66" fill="rgba(255,59,79,.07)"/>
+ <line x1="60" x2="740" y1="86" y2="86" stroke="#FF9A3C" stroke-dasharray="5 5"/>
+ <text x="736" y="80" font-size="13" text-anchor="end" fill="#c2621a">KSS 7 · 졸음 위험</text>
+ <line x1="60" x2="60" y1="20" y2="300" stroke="#c9d5da"/><line x1="60" x2="740" y1="300" y2="300" stroke="#c9d5da"/>
+ <text x="50" y="304" font-size="12" text-anchor="end" fill="#7a8796">KSS 3</text><text x="50" y="40" font-size="12" text-anchor="end" fill="#7a8796">9</text>
+ <text x="740" y="322" font-size="12" text-anchor="end" fill="#7a8796">주행 시간 →</text>
+ <!-- without KKAEUM -->
+ <path d="M60,260 C200,232 330,170 430,112 S600,40 740,26" stroke="#b9c3cc" stroke-width="3" fill="none" stroke-dasharray="7 6"/>
+ <text x="738" y="14" font-size="13" text-anchor="end" fill="#8a96a3">개입 없음</text>
+ <!-- with KKAEUM -->
+ <path d="M60,260 C150,240 230,200 290,178 L330,190 C380,176 420,150 470,128 L500,230 C560,214 650,196 740,180" stroke="url(#k)" stroke-width="4" fill="none"/>
+ <text x="620" y="170" font-size="14" font-weight="700" fill="#0f7c6e">깨움</text>
+ <!-- markers -->
+ <g font-size="13">
+  <circle cx="290" cy="178" r="7" fill="#0f7c6e"/><text x="272" y="208" text-anchor="end" fill="#0f7c6e" font-weight="700">① 깨움 L1 · KSS 5</text><text x="272" y="225" text-anchor="end" fill="#3f4c5c">외기 전환·온도 −1.5℃·조명</text>
+  <circle cx="470" cy="128" r="7" fill="#0f7c6e"/><text x="485" y="118" fill="#0f7c6e" font-weight="700">② 쉼터 경유지 추가</text><text x="485" y="135" fill="#3f4c5c">KSS 7 도달 전 도착 가능한 마지막 쉼터</text>
+  <circle cx="500" cy="230" r="7" fill="#0f7c6e"/><text x="512" y="262" fill="#0f7c6e" font-weight="700">③ 15분 파워냅 후 재출발</text>
+  <circle cx="470" cy="112" r="6" fill="none" stroke="#7a8796" stroke-width="2"/><text x="300" y="100" text-anchor="end" fill="#5b6878">차량 CO₂ 자동 환기</text><text x="300" y="116" text-anchor="end" fill="#5b6878">(2,000ppm 초과 시 · 사양 적용 차량)</text><line x1="304" y1="104" x2="463" y2="112" stroke="#a8b3bd"/>
+  <circle cx="610" cy="52" r="6" fill="none" stroke="#c2621a" stroke-width="2"/><text x="598" y="46" text-anchor="end" fill="#c2621a" font-weight="700">DAW 휴식 권유</text><text x="598" y="62" text-anchor="end" fill="#c2621a">(주의 저하 감지 “후”)</text>
+ </g>
+</svg>
+</div>
+<div class="card"><h3>기존 기능 → 깨움의 역할</h3>
+<table>
+<tr><td><b>DAW 운전자 주의 경고</b><small>카메라·조향으로 주의 저하 감지 → 휴식 권유 문구·경고음</small></td><td>DRIVER_ATTENTION 텔테일을 <span class="k">입력 신호로 사용</span>해 즉시 L3로 승격하고, 문구에서 끝나지 않게 <span class="k">쉼터 경유지 추가</span>까지 연결</td></tr>
+<tr><td><b>CO₂ 자동 환기 (사양 적용 시)</b><small>실내 CO₂ 증가 시 외기 유입 · 임계값 반응형</small></td><td>Pleos SDK는 CO₂ 값을 앱에 주지 않음 → 공조 상태·탑승 인원·속도로 <span class="k">CO₂를 추정</span>(센서 없는 차도 동작). 졸음 예측과 결합해 <span class="k">1,200ppm에서 선제</span> 환기, 미세먼지 나쁘면 펄스 환기</td></tr>
+<tr><td><b>내비게이션</b><small>목적지 안내 · 휴게소 정보</small></td><td>졸음 예측 곡선 × 공공데이터 쉼터 253곳 → <span class="k">“위험 전 마지막 쉼터”</span>를 계산해 NaviHelper.addWaypoint()로 화면 조작 없이 추가</td></tr>
+<tr><td><b>공조·조명·시트 개별 기능</b><small>운전자가 각각 수동 조작</small></td><td>졸음 단계(L0–L4)에 맞춰 <span class="k">하나의 시나리오로 오케스트레이션</span> · 정차 시 파워냅 모드</td></tr>
+</table>
+<div class="core"><b>현대차그룹 입장의 가치</b>: 이미 탑재한 안전·공조 자산(DAW, CO₂ 자동 환기, 쉼터 인프라)의 효과를 앱 하나로 끌어올리는 <b>Pleos 소프트웨어 레이어</b>. 새 센서·하드웨어 추가 없음.</div>
+</div>
+</div>
+</div></body></html>

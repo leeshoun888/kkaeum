@@ -58,7 +58,7 @@ export class NativeVehicle implements VehicleBus {
     try {
       parsed = JSON.parse(api.capabilities())
     } catch {
-      /* host returned nothing — assume minimal */
+      /* host returned nothing · assume minimal */
     }
     this.caps = {
       hvacRecirculation: false,

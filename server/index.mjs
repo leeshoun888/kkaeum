@@ -116,14 +116,16 @@ async function handleApi(req, res, url) {
           {
             role: 'system',
             content:
-              '너는 졸음운전 예방 앱 "깨움"의 안전 코치다. 주어진 주행 요약 JSON만 근거로, 운전자에게 주는 주행 리포트를 한국어로 쓴다. 형식: 제목 한 줄, 핵심 요약 2문장, "잘한 점" 2개, "다음 주행 팁" 3개(구체적 시각·행동). 과장·의학적 진단 금지. 마크다운 사용.',
+              '너는 졸음운전 예방 앱 "깨움"의 안전 코치다. 주어진 주행 요약 JSON만 근거로, 운전자에게 주는 주행 리포트를 한국어로 쓴다. 형식: 제목 한 줄, 핵심 요약 2문장, "잘한 점" 2개, "다음 주행 팁" 3개(구체적 시각·행동). 과장·의학적 진단 금지. 마크다운 사용. 엠대시(—) 문장부호는 쓰지 않는다.',
           },
           { role: 'user', content: JSON.stringify(b).slice(0, 12_000) },
         ],
       })
       const j = await r.json()
       if (!r.ok) return json(res, r.status, { error: j.error?.message ?? 'coach error' })
-      const text = j.output?.find((o) => o.type === 'message')?.content?.[0]?.text ?? ''
+      const raw = j.output?.find((o) => o.type === 'message')?.content?.[0]?.text ?? ''
+      // House style: no em dashes in anything shown to the user.
+      const text = raw.replace(/\s*\u2014\s*/g, ', ')
       return json(res, 200, { text })
     }
     return json(res, 404, { error: 'not found' })

@@ -1,5 +1,5 @@
 // A faithful Pleos Connect-S (17", 2560×1440) head-unit frame: status bar, driving view,
-// application window (our app, landscape) and the GNB with live climate controls — so the
+// application window (our app, landscape) and the GNB with live climate controls · so the
 // judges can see the app actually moving the car's HVAC, seat and light.
 
 import { useEffect, useRef, useState } from 'react'

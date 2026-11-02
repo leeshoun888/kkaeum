@@ -1,4 +1,4 @@
-// Intervention orchestrator — an escalation ladder with hysteresis and cooldowns.
+// Intervention orchestrator · an escalation ladder with hysteresis and cooldowns.
 // L0 Watch → L1 Refresh (air/thermal/light) → L2 Engage (voice dialogue + probe)
 // → L3 Rest (navigate to a rest stop) → L4 Critical. Parked: Power-Nap Pod.
 // The orchestrator never touches driving controls; it only acts on cabin comfort,
@@ -74,7 +74,7 @@ export class Orchestrator {
         { kind: 'temperature', value: 22.5, reason: '입면에 적합한 22~23℃' },
         { kind: 'fan', value: 2, reason: '저소음 송풍' },
         { kind: 'freshAir', value: true, reason: '수면 중 CO₂ 축적 방지' },
-        { kind: 'ambient', value: AMBIENT.nap, reason: '저조도 웜톤 — 멜라토닌 억제 최소화' },
+        { kind: 'ambient', value: AMBIENT.nap, reason: '저조도 웜톤 · 멜라토닌 억제 최소화' },
         { kind: 'speak', value: 'nap_start', reason: '안내' },
       ],
     }
@@ -87,7 +87,7 @@ export class Orchestrator {
       t,
       level: 0,
       title: '기상 시퀀스',
-      detail: '빛·바람·소리를 90초에 걸쳐 단계적으로 — 급격한 각성 없이 수면관성 해소',
+      detail: '빛·바람·소리를 90초에 걸쳐 단계적으로, 급격한 각성 없이 수면관성 해소',
       actions: [
         { kind: 'napWake', reason: '파워냅 종료' },
         { kind: 'ambient', value: AMBIENT.wake, reason: '고휘도 주광색 (각성 촉진)' },
@@ -122,7 +122,7 @@ export class Orchestrator {
       out.push({
         t,
         level: est.level,
-        title: '실내 CO₂ 축적 — 외기 유입 전환',
+        title: '실내 CO₂ 축적 · 외기 유입 전환',
         detail: `CO₂ ${Math.round(co2).toLocaleString()}ppm (${co2Band(co2) === 'drowsy' ? '졸음 유발 구간' : '환기 필요'}). 내기순환을 외기 유입으로 전환합니다.`,
         actions: [
           { kind: 'freshAir', value: true, reason: `CO₂ ${Math.round(co2)}ppm > 1,200ppm` },
@@ -146,7 +146,7 @@ export class Orchestrator {
         out.push({
           t,
           level: est.level,
-          title: want ? '미세먼지 대응 펄스 환기 ON' : '펄스 환기 OFF — 내기순환 복귀',
+          title: want ? '미세먼지 대응 펄스 환기 ON' : '펄스 환기 OFF · 내기순환 복귀',
           detail: `외부 PM2.5 ${sig.outsidePm25}µg/m³. CO₂와 미세먼지 유입을 동시에 최소화하는 듀티사이클 ${(duty * 100).toFixed(0)}%`,
           actions: [
             want
@@ -196,12 +196,12 @@ export class Orchestrator {
       out.push({
         t,
         level: 1,
-        title: 'L1 리프레시 — 캐빈 각성 모드',
+        title: 'L1 리프레시 · 캐빈 각성 모드',
         detail: '서늘한 공기·송풍·주광색 앰비언트로 각성 유지 (운전 조작 개입 없음)',
         actions: [
           { kind: 'temperature', value: Math.max(19.5, sig.setTempC - 1.5), reason: '체온 하강 → 각성' },
           { kind: 'fan', value: Math.min(8, sig.fanSpeed + 1), reason: '얼굴 쪽 기류 증가' },
-          { kind: 'ambient', value: AMBIENT.cool, reason: '청백색 광 — 각성 효과' },
+          { kind: 'ambient', value: AMBIENT.cool, reason: '청백색 광 · 각성 효과' },
           { kind: 'speak', value: 'refresh', reason: '짧은 음성 안내' },
         ],
       })
@@ -211,7 +211,7 @@ export class Orchestrator {
       out.push({
         t,
         level: 2,
-        title: 'L2 인게이지 — AI 대화 + 반응속도 측정',
+        title: 'L2 인게이지 · AI 대화 + 반응속도 측정',
         detail: '경로 기반 퀴즈/대화로 인지 각성을 유도하고, 음성 반응속도로 졸음을 직접 측정합니다.',
         actions: [
           { kind: 'seatVent', value: 3, reason: '등·허벅지 냉각' },
@@ -230,8 +230,8 @@ export class Orchestrator {
       out.push({
         t,
         level: 3,
-        title: sig.dawWarning ? 'L3 차량 주의 경고 연동 — 즉시 휴식' : 'L3 휴식 필요',
-        detail: `KSS ${est.kss.toFixed(1)} — 졸음운전 위험 구간 진입`,
+        title: sig.dawWarning ? 'L3 차량 주의 경고 연동 · 즉시 휴식' : 'L3 휴식 필요',
+        detail: `KSS ${est.kss.toFixed(1)} · 졸음운전 위험 구간 진입`,
         actions: acts,
       })
     }
@@ -239,7 +239,7 @@ export class Orchestrator {
       out.push({
         t,
         level: 4,
-        title: 'L4 위험 — 반복 경고',
+        title: 'L4 위험 · 반복 경고',
         detail: '즉시 가까운 안전한 곳에 정차하세요.',
         actions: [{ kind: 'speak', value: 'critical', reason: '반복 경고' }],
       })
@@ -249,7 +249,7 @@ export class Orchestrator {
       out.push({
         t,
         level: 0,
-        title: '각성 회복 — 개입 해제',
+        title: '각성 회복 · 개입 해제',
         detail: '운전자 상태가 안정되어 캐빈을 평상시로 되돌립니다.',
         actions: [
           { kind: 'ambient', value: AMBIENT.calm, reason: '평상시' },

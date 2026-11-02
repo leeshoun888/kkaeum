@@ -43,7 +43,7 @@ export const clock = (t: number) => {
 }
 
 export const dur = (min: number | null) => {
-  if (min === null) return '—'
+  if (min === null) return '-'
   if (min < 1) return '지금'
   if (min < 60) return `${Math.round(min)}분`
   const h = Math.floor(min / 60)

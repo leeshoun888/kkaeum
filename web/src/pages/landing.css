@@ -1,4 +1,4 @@
-/* 깨움 KKAEUM — landing page. Everything is scoped under .landing */
+/* 깨움 KKAEUM · landing page. Everything is scoped under .landing */
 
 .landing {
   --lp-gutter: 32px;
@@ -1825,4 +1825,19 @@
   .landing .lp-art-curve {
     stroke-dashoffset: 0;
   }
+}
+
+/* existing-feature layer comparison (WhyCar) */
+.landing .lp-layer { margin-top: 28px; padding: 26px 28px; border-radius: 22px; }
+.landing .lp-layer-h h3 { margin: 6px 0 18px; font-size: clamp(20px, 2.2vw, 28px); letter-spacing: -0.02em; }
+.landing .lp-layer-rows { display: grid; gap: 10px; }
+.landing .lp-layer-row { display: grid; grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1.6fr); gap: 14px; align-items: center; padding: 14px 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); }
+.landing .lp-layer-row b { display: block; font-size: 16px; }
+.landing .lp-layer-row small { color: var(--muted, #8b97a8); font-size: 13px; }
+.landing .lp-layer-row p { margin: 0; font-size: 15px; line-height: 1.5; color: #d9f7f0; }
+.landing .lp-layer-arrow { color: #3cf2c8; font-size: 20px; text-align: center; }
+.landing .lp-layer-foot { margin: 16px 0 0; color: #3cf2c8; font-size: 14px; }
+@media (max-width: 720px) {
+  .landing .lp-layer-row { grid-template-columns: 1fr; }
+  .landing .lp-layer-arrow { display: none; }
 }

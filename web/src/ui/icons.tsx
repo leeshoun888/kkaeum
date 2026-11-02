@@ -1,4 +1,4 @@
-// Minimal stroke icon set (24×24 grid, 1.75 stroke) — no external icon dependency.
+// Minimal stroke icon set (24×24 grid, 1.75 stroke) · no external icon dependency.
 import type { SVGProps } from 'react'
 
 type P = SVGProps<SVGSVGElement> & { size?: number }
@@ -114,11 +114,11 @@ export const IcEye = ({ size, ...p }: P) => (
     <circle cx="12" cy="12" r="3" />
   </svg>
 )
-export const IcTruck = ({ size, ...p }: P) => (
+export const IcCar = ({ size, ...p }: P) => (
   <svg {...base(size)} {...p}>
-    <path d="M2 6h11v10H2zM13 10h4l4 4v2h-8" />
-    <circle cx="6" cy="18" r="2" />
-    <circle cx="17" cy="18" r="2" />
+    <path d="M3 16v-4l2.2-5A2 2 0 0 1 7 6h10a2 2 0 0 1 1.8 1l2.2 5v4H3zM3 12h18" />
+    <circle cx="7" cy="17" r="2" />
+    <circle cx="17" cy="17" r="2" />
   </svg>
 )
 export const IcAlert = ({ size, ...p }: P) => (
@@ -144,7 +144,7 @@ export const IcSpark = ({ size, ...p }: P) => (
   </svg>
 )
 
-/** KKAEUM brand mark: a sunrise over the horizon inside an eye — "waking" before drowsiness. */
+/** KKAEUM brand mark: a sunrise over the horizon inside an eye · "waking" before drowsiness. */
 export const Logo = ({ size = 28 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
     <defs>

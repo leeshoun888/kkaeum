@@ -282,7 +282,7 @@ function NapView({ snap }: { snap: Snapshot }) {
       <div className="nap-side">
         <NapStep on icon={<IcSeat size={34} />} t="좌석 등받이 젖힘" />
         <NapStep on icon={<IcTemp size={34} />} t={`${snap.sig.setTempC.toFixed(1)}℃ · 송풍 ${snap.sig.fanSpeed}단`} />
-        <NapStep on={!snap.sig.recirculation} icon={<IcWind size={34} />} t="외기 유입 — CO₂ 축적 방지" />
+        <NapStep on={!snap.sig.recirculation} icon={<IcWind size={34} />} t="외기 유입 · CO₂ 축적 방지" />
         <NapStep on icon={<IcSun size={34} />} t={snap.mode === 'waking' ? '주광색 조명으로 각성' : '저조도 웜톤 조명'} />
         {snap.mode === 'napping' && (
           <button className="big wide" onClick={() => rt.wakeNow()}>
@@ -313,7 +313,9 @@ function VoiceBar() {
 
 function QuizOverlay() {
   const quiz = useVoice((s) => s.quiz)
-  if (!quiz) return null
+  const driving = useSim((s) => s.snap?.mode === 'driving')
+  // The quiz is an in-motion engagement tool: never show it over the nap / parked screens.
+  if (!quiz || !driving) return null
   return (
     <div className="overlay quiz rise">
       <div className="ov-k">각성 퀴즈 · {quiz.region}</div>

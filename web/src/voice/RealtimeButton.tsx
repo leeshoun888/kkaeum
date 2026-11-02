@@ -10,7 +10,7 @@ export function RealtimeButton() {
       <button
         className={`btn rt-btn ${live ? 'live' : ''} ${status}`}
         onClick={() => (live || status === 'connecting' ? stopRealtime() : startRealtime())}
-        title="OpenAI Realtime 음성 코파일럿 — 말로 차를 제어"
+        title="OpenAI Realtime 음성 코파일럿 · 말로 차를 제어"
       >
         <IcSpark size={16} />
         {status === 'connecting' ? '연결 중…' : live ? '대화 종료' : '깨움이와 대화'}

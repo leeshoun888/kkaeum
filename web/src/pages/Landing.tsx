@@ -1,4 +1,4 @@
-// 깨움 KKAEUM — landing / pitch page.
+// 깨움 KKAEUM · landing / pitch page.
 // Facts used here come only from research/market_research.md items tagged [검증] or [계산],
 // and from src/data/accidents.json (한국도로공사 졸음운전 사고통계 2023–2025 원자료).
 
@@ -18,14 +18,14 @@ import {
   IcPin,
   IcSeat,
   IcSpark,
-  IcTruck,
+  IcCar,
   IcWind,
   Logo,
 } from '../ui/icons'
 import './landing.css'
 
 /* ──────────────────────────────────────────────────────────────────────────
-   3D hero — loaded lazily. import.meta.glob keeps this file compiling even
+   3D hero · loaded lazily. import.meta.glob keeps this file compiling even
    when ../console/CabinTwin.tsx does not exist yet (the glob is then empty).
    ────────────────────────────────────────────────────────────────────────── */
 type HeroModule = { CabinTwinHero?: ComponentType }
@@ -415,10 +415,10 @@ function Problem() {
         </div>
         <Reveal className="lp-problem-foot">
           <p>
-            기존 운전자 주의 경고(DAW)는 조향 패턴과 주행 시간을 보고 <b>“휴식하세요”</b>라고 알리는 데서 끝납니다. 깨움은 그 다음을 합니다 — 공기를 바꾸고, 빛과
-            바람으로 깨우고, 쉼터까지 데려갑니다.
+            운전자 주의 경고(DAW)와 CO₂ 자동 환기는 주의가 떨어지거나 CO₂가 쌓인 <b>“뒤”</b>에 반응합니다. 깨움은 그 신호를 입력으로 받아 <b>“전”</b>에
+            움직입니다. 공기를 바꾸고, 빛과 바람으로 깨우고, 쉼터까지 데려갑니다.
           </p>
-          <span className="lp-src">기아 사용설명서 · 운전자 주의 경고</span>
+          <span className="lp-src">기아 MV1 사용설명서 · 운전자 주의 경고 / 현대 인포테인먼트 매뉴얼 · CO₂ 자동 환기</span>
         </Reveal>
       </div>
     </section>
@@ -643,7 +643,7 @@ const WHY = [
     title: '차량이 직접 공기를 바꾼다',
     body: '실내 CO₂가 쌓이는 1차 원인은 환기 설정입니다. 깨움은 CO₂ 디지털 트윈으로 농도를 추정해, 위험해지기 전에 내기순환을 외기로 전환합니다.',
     api: 'HVAC.setHvacRecirculation',
-    ev: '외기 유입 모드에선 우려 수준을 넘지 않음 — Hudda & Fruin, Sci. Total Environ. 2018',
+    ev: '외기 유입 모드에선 우려 수준을 넘지 않음 · Hudda & Fruin, Sci. Total Environ. 2018',
   },
   {
     icon: IcLight,
@@ -651,7 +651,7 @@ const WHY = [
     title: '빛과 바람으로 깨운다',
     body: '앰비언트 라이트를 각성 색으로, 통풍시트와 송풍을 시원하게. 스마트폰은 소리만 낼 수 있지만, 차는 운전자의 몸을 둘러싼 환경 전체를 바꿀 수 있습니다.',
     api: 'Light · Seat · HVAC',
-    ev: '대시보드 청색광으로 차선 이탈 26.4 → 14.6회 — Taillard et al., PLoS One 2012',
+    ev: '대시보드 청색광으로 차선 이탈 26.4 → 14.6회 · Taillard et al., PLoS One 2012',
   },
   {
     icon: IcPin,
@@ -659,7 +659,7 @@ const WHY = [
     title: '내비가 쉼터로 데려간다',
     body: '“쉬세요”라는 말 대신, 졸음이 오기 전 도달 가능한 마지막 휴게소를 계산해 현재 경로에 경유지로 바로 추가합니다.',
     api: 'NaviHelper.addWaypoint',
-    ev: '졸음쉼터 설치 구간 사고 47% 감소 — 국토교통부 2014',
+    ev: '졸음쉼터 설치 구간 사고 47% 감소 · 국토교통부 2014',
   },
   {
     icon: IcMoon,
@@ -667,7 +667,7 @@ const WHY = [
     title: '차가 침실이 된다',
     body: '주차하면 파워냅 모드. 시트를 젖히고, 공조와 조명을 낮추고, 20분 뒤 빛·바람·소리로 천천히 깨웁니다. 수면 관성까지 고려한 기상 시퀀스입니다.',
     api: 'Seat.moveSeatBackrestAngle',
-    ev: '카페인 + 15분 미만 낮잠 시 운전 사고 위약 대비 9% — Reyner & Horne 1997',
+    ev: '카페인 + 15분 미만 낮잠 시 운전 사고 위약 대비 9% · Reyner & Horne 1997',
   },
 ] as const
 
@@ -702,10 +702,35 @@ function WhyCar() {
             </Reveal>
           ))}
         </div>
+        <Reveal className="lp-layer glass">
+          <div className="lp-layer-h">
+            <span className="eyebrow">기존 차량 기능과의 관계</span>
+            <h3>대체하지 않습니다. 그 위에서 먼저 움직입니다.</h3>
+          </div>
+          <div className="lp-layer-rows">
+            {LAYERS.map((l) => (
+              <div key={l.has} className="lp-layer-row">
+                <div>
+                  <b>{l.has}</b>
+                  <small>{l.now}</small>
+                </div>
+                <span className="lp-layer-arrow" aria-hidden>→</span>
+                <p>{l.kkaeum}</p>
+              </div>
+            ))}
+          </div>
+          <p className="lp-layer-foot">새 센서·하드웨어 없이, 이미 탑재된 안전·공조 자산의 효과를 끌어올리는 Pleos 소프트웨어 레이어.</p>
+        </Reveal>
       </div>
     </section>
   )
 }
+
+const LAYERS = [
+  { has: 'DAW 운전자 주의 경고', now: '주의 저하 감지 후 휴식 권유 문구·경고음', kkaeum: 'DRIVER_ATTENTION 텔테일을 입력으로 즉시 L3 승격 → 문구에서 끝나지 않고 쉼터 경유지 추가까지' },
+  { has: 'CO₂ 자동 환기 (사양 적용 차량)', now: '센서가 임계값 초과 시 외기 유입', kkaeum: 'SDK가 CO₂ 값을 주지 않아도 공조·탑승·속도로 추정 → 졸음 예측과 결합해 1,200ppm에서 선제 환기, 미세먼지 나쁘면 펄스' },
+  { has: '내비게이션', now: '목적지 안내 · 휴게소 정보', kkaeum: '졸음 예측 곡선 × 쉼터 253곳 → “위험 전 마지막 쉼터”를 NaviHelper로 경유지 추가' },
+]
 
 /* ─────────────────────────────── 5. how it works ─────────────────────────────── */
 
@@ -851,7 +876,7 @@ function HowItWorks() {
           <Reveal className="lp-tech-card glass" delay={0.12}>
             <div className="eyebrow">예측 휴식 플래너</div>
             <h4>졸리기 전, 마지막 안전한 쉼터</h4>
-            <p>예측 졸음 곡선과 경로 위 휴게소·졸음쉼터를 교차해, 도착 시점 KSS가 안전 기준 아래인 가장 먼 쉼터를 고릅니다. 화물차는 2시간 연속운전 규정도 함께 지킵니다.</p>
+            <p>예측 졸음 곡선과 경로 위 휴게소·졸음쉼터를 교차해, 도착 시점 KSS가 안전 기준 아래인 가장 먼 쉼터를 고릅니다. 플릿 차량은 회사 휴식정책(예: 2시간마다 15분)도 함께 지킵니다.</p>
             <div className="lp-formula mono">argmax km  s.t. KSS(t_arrive) &lt; θ</div>
             <span className="lp-src">고속도로 졸음쉼터 253개소 · 한국도로공사 표준데이터 2026</span>
           </Reveal>
@@ -898,7 +923,7 @@ const SDKS = [
   { name: 'NaviHelper', ver: '3.0.5', icon: IcPin, apis: ['addWaypoint', 'getDestinationInfo', 'TBT · TURN_RESTAREA'], use: '쉼터 경유지 · 남은 시간' },
   { name: 'TextToSpeech', ver: '3.3.1', icon: IcSpark, apis: ['speak', 'EventListener'], use: '대화형 각성 · 안내' },
   { name: 'SpeechToText', ver: '3.3.1', icon: IcMic, apis: ['request', 'onUpdated', 'ON_DEVICE'], use: 'Voice PVT 응답 인식' },
-  { name: 'FusedLocation', ver: '1.1.3', icon: IcTruck, apis: ['LocationData'], use: '경로 진행·쉼터 거리' },
+  { name: 'FusedLocation', ver: '1.1.3', icon: IcCar, apis: ['LocationData'], use: '경로 진행·쉼터 거리' },
   { name: 'Gleo Interface', ver: 'schema.json', icon: IcSeat, apis: ['FIND_REST_STOP', 'START_POWER_NAP', 'CHECK_ALERTNESS'], use: '“글레오, 쉴 곳 찾아줘”' },
 ]
 
@@ -1063,10 +1088,10 @@ const MODELS = [
   },
   {
     tag: 'B2B Fleet',
-    title: '화물·버스 운수사',
-    body: '운행별 졸음 위험·휴식 이력을 Fleet 콘솔로. 예측 플래너가 “2시간 연속운전 후 15분 휴식” 규정을 경로 위에서 자동으로 맞춥니다.',
-    fact: '10만 대당 졸음사고: 승합 11.2 · 화물 10.6 · 승용 7.8건',
-    src: '경찰청 2019–2023 · SBS Biz / 화물자동차 운수사업법 2021.03 시행',
+    title: '법인차 · 렌터카 플릿',
+    body: '출장·영업·장기렌트 차량의 졸음 위험과 휴식 이력을 Fleet 콘솔로. 예측 플래너가 회사 휴식정책(예: 2시간마다 15분)을 경로 위에서 자동으로 맞춥니다.',
+    fact: '렌터카 약 101만 대 · 졸음 사망 1명당 사고비용 5.3억 원',
+    src: '렌터카연합회 2020.7 / 도로교통공단 2022 기준',
   },
   {
     tag: 'B2B2C 보험',
@@ -1080,14 +1105,14 @@ const MODELS = [
 const KPIS = [
   { v: '5%', l: 'Pleos Connect 탑재 차량 중 월 활성 비율', n: '목표' },
   { v: '40%', l: '장거리 주행자 4주 리텐션', n: '목표' },
-  { v: '500대', l: 'Fleet 파일럿 (화물·버스)', n: '목표' },
+  { v: '500대', l: 'Fleet 파일럿 (법인·렌터카)', n: '목표' },
   { v: '1곳', l: '보험사 UBI 특약 제휴', n: '목표' },
 ]
 
 const ROADMAP = [
   { t: '2026 Q4', h: 'PoC', d: 'Pleos Playground 에뮬레이터 검증, 공모전 출품, 내부 실차 테스트 제안' },
   { t: '2027', h: 'App Market 출시', d: 'Pleos Connect 탑재 차종 대상 출시, Gleo 음성 연동, 사용자 기준선 학습' },
-  { t: '2028', h: 'Fleet · 보험 연동', d: '운수사 Fleet 콘솔 상용화, 보험사 UBI 특약, 해외 출시 검토' },
+  { t: '2028', h: 'Fleet · 보험 연동', d: '법인·렌터카 Fleet 콘솔 상용화, 보험사 UBI 특약, 화물·버스 확장, 해외(EU GSR) 검토' },
 ]
 
 function Business() {
@@ -1103,7 +1128,7 @@ function Business() {
               비즈니스가 되는 구조.
             </>
           }
-          lead="운전자에게는 기본 안전 기능, 운수사에게는 규정 준수 도구, 보험사에게는 새로운 위험 지표. 하나의 엔진으로 세 시장을 엽니다."
+          lead="운전자에게는 기본 안전 기능, 플릿 운영사에게는 안전정책 관리 도구, 보험사에게는 새로운 위험 지표. 하나의 엔진으로 세 시장을 엽니다."
         />
         <div className="lp-grid lp-biz">
           {MODELS.map((m, i) => (

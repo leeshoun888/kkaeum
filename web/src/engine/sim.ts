@@ -63,8 +63,8 @@ export const SCENARIOS: ScenarioConfig[] = [
   },
   {
     id: 'fleet-dawn',
-    title: '화물 운송 · 새벽 배송',
-    subtitle: '03:40 출발 · 사업용 · 2시간 연속운전 규정',
+    title: '법인 출장 · 새벽 출발',
+    subtitle: '03:40 출발 · 법인차 플릿 · 2시간 휴식정책',
     startHour: 3,
     startMinute: 40,
     wakeHour: 2.75,

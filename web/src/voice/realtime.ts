@@ -1,6 +1,6 @@
 // Conversational copilot over the OpenAI Realtime API (WebRTC, speech-to-speech).
 // The model drives the car only through typed tools that call into the same Runtime
-// the orchestrator uses — so a spoken "좀 졸려" ends up as real Pleos SDK calls.
+// the orchestrator uses · so a spoken "좀 졸려" ends up as real Pleos SDK calls.
 
 import { create } from 'zustand'
 import type { Runtime } from '../engine/runtime'
@@ -131,7 +131,7 @@ export async function startRealtime() {
   useRealtime.setState({ status: 'connecting', error: null, transcript: [] })
   try {
     const r = await fetch(`${import.meta.env.BASE_URL}api/realtime/session`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
-    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? `세션 발급 실패 (${r.status}) — API 서버(server/index.mjs) 필요`)
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? `세션 발급 실패 (${r.status}), API 서버(server/index.mjs) 필요`)
     const { value } = await r.json()
     pc = new RTCPeerConnection()
     audioEl = new Audio()

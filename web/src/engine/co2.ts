@@ -1,4 +1,4 @@
-// Cabin CO2 digital twin — a single-zone mass balance:
+// Cabin CO2 digital twin · a single-zone mass balance:
 //
 //   dC/dt = N·G / V  −  λ(t) · (C − C_out)
 //
@@ -6,7 +6,7 @@
 // V: cabin air volume [m³], λ: air-exchange rate [1/h] which depends on the
 // HVAC intake mode, fan speed, vehicle speed and window opening.
 // Solved exactly per step (the ODE is linear with piecewise-constant inputs),
-// so the model is stable for any time step — important for 60× time-lapse.
+// so the model is stable for any time step · important for 60× time-lapse.
 
 export interface CabinParams {
   volumeM3: number

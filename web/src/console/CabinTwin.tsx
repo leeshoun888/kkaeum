@@ -1,5 +1,5 @@
 /**
- * CabinTwin — real-time 3D "cabin digital twin" for the Mission Control console.
+ * CabinTwin · real-time 3D "cabin digital twin" for the Mission Control console.
  *
  * Everything is procedural (no model files). Motion is GPU-driven: particle
  * systems animate in their vertex shaders from integrated clocks, so the CPU
