@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Android Automotive OS (FusedLocation AAR also declares this). -->
+    <uses-feature android:name="android.hardware.type.automotive" android:required="true" />
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
+    <uses-feature android:name="android.hardware.screen.landscape" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Pleos Vehicle SDK 2.3.2: read (State SDK, no application needed) -->
+    <uses-permission android:name="pleos.car.permission.CAR_CLIMATE" />
+    <uses-permission android:name="pleos.car.permission.CAR_SEATS" />
+    <uses-permission android:name="pleos.car.permission.CAR_LIGHTS" />
+    <uses-permission android:name="pleos.car.permission.CAR_WINDOWS" />
+    <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />
+    <uses-permission android:name="pleos.car.permission.CAR_SAFETY" />
+
+    <!-- Pleos Vehicle SDK 2.3.2: control. App Market pre-approval required; every call degrades gracefully. -->
+    <uses-permission android:name="pleos.car.permission.CONTROL_CAR_CLIMATE" />
+    <uses-permission android:name="pleos.car.permission.CONTROL_CAR_SEATS" />
+    <uses-permission android:name="pleos.car.permission.CONTROL_CAR_LIGHTS" />
+    <uses-permission android:name="pleos.car.permission.CONTROL_CAR_WINDOWS" />
+
+    <!-- NaviHelper 3.0.5 -->
+    <uses-permission android:name="pleos.car.permission.NAVI_ROUTE" />
+    <uses-permission android:name="pleos.car.permission.NAVI_ROUTE_SEARCH" />
+
+    <!-- TextToSpeech / SpeechToText 3.3.1 -->
+    <uses-permission android:name="pleos.car.permission.TTS_SERVICE" />
+    <uses-permission android:name="pleos.car.permission.STT_SERVICE" />
+
+    <!-- FusedLocation 1.1.3 (dangerous: runtime request) -->
+    <uses-permission android:name="pleos.car.permission.FUSED_LOCATION" />
+
+    <!-- AAOS Car API: PERF_VEHICLE_SPEED (dangerous), GEAR_SELECTION / PARKING_BRAKE_ON, ENV_OUTSIDE_TEMPERATURE -->
+    <uses-permission android:name="android.car.permission.CAR_SPEED" />
+    <uses-permission android:name="android.car.permission.CAR_POWERTRAIN" />
+    <uses-permission android:name="android.car.permission.CAR_EXTERIOR_ENVIRONMENT" />
+
+    <application
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="false"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Kkaeum"
+        tools:targetApi="34">
+
+        <!-- No screenOrientation: Pleos requires portrait (1 window) and landscape (2 windows) with feature parity.
+             configChanges keeps the WebView (and the running fatigue engine) alive across window resizes. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|keyboard|keyboardHidden|navigation|uiMode|fontScale"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Distraction Optimized: usable while driving (UI still honours CarUxRestrictions). -->
+            <meta-data android:name="distractionOptimized" android:value="true" />
+        </activity>
+
+        <!-- Gleo Interface: component="service" in assets/schema.json → Gleo sends a broadcast whose action is the
+             function name. Exported because Gleo is another package; the receiver only accepts these 3 actions. -->
+        <receiver
+            android:name=".gleo.GleoReceiver"
+            android:exported="true">
+            <intent-filter><action android:name="GET_ALERTNESS_STATUS" /></intent-filter>
+            <intent-filter><action android:name="ADD_REST_STOP" /></intent-filter>
+            <intent-filter><action android:name="START_POWER_NAP" /></intent-filter>
+        </receiver>
+    </application>
+</manifest>

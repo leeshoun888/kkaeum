@@ -1,0 +1,58 @@
+{
+  "packageName": "com.kkaeum.copilot",
+  "appDescription": "KKAEUM is a drowsy-driving prevention copilot that estimates driver alertness and plans rest stops and power naps.",
+  "invokeWord": "깨움",
+  "version": "1.0.0",
+  "actionCalls": [
+    {
+      "type": "function",
+      "function": {
+        "name": "GET_ALERTNESS_STATUS",
+        "description": "Returns the driver's current estimated alertness level and the recommended time until the next break.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        },
+        "component": "service"
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "ADD_REST_STOP",
+        "description": "Adds the most suitable upcoming rest area or drowsy-driving shelter on the current route as a navigation waypoint.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": ["REST_AREA", "DROWSY_SHELTER"],
+              "description": "Preferred type of stop."
+            }
+          },
+          "required": []
+        },
+        "component": "service"
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "START_POWER_NAP",
+        "description": "Starts a guided power nap with cabin climate, seat and lighting adjusted, only while the vehicle is parked.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "minutes": {
+              "type": "number",
+              "description": "Nap length in minutes."
+            }
+          },
+          "required": []
+        },
+        "component": "service"
+      }
+    }
+  ]
+}
