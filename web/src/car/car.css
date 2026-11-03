@@ -1,7 +1,5 @@
-/* In-vehicle app.
-   Pleos Connect design system: Asta Sans type scale (Headline 60/56/48 · Title 40/36/32 ·
-   Body 30/28/26 · Label 24/20, in dp), basic_* greys, informative colours, 40 dp safe padding,
-   buttons that shrink to 95 % on press, and the system day / night theme. */
+/* In-vehicle app · sizes follow the Pleos Connect type scale
+   (Headline 60/56/48, Title 40/36/32, Body 30/28/26, Label 24/20) in dp. */
 
 .car-frame {
   position: relative;
@@ -15,1471 +13,769 @@
   top: 50%;
   transform-origin: center;
 }
-
-/* ── Theme tokens ─────────────────────────────────────────────────────────── */
-.car-app[data-theme='day'] {
-  --bg: #f7f8fa; /* background_primary (basic_50) */
-  --surface: #ffffff; /* background_secondary (basic_00) */
-  --surface-2: #f1f2f5;
-  --surface-3: #e7e9ee;
-  --line: #e7e8ec;
-  --line-strong: #c7c9ce;
-  --t1: #131417;
-  --t2: #44464e;
-  --t3: #686a72;
-  --t4: #a4a8ae;
-  --accent: #00a389;
-  --accent-2: #0064ff; /* informative_positive */
-  --accent-ink: #ffffff;
-  --accent-soft: rgba(0, 163, 137, 0.1);
-  --l0: #02a85c;
-  --l1: #5a9e10;
-  --l2: #d18f00;
-  --l3: #ea640c;
-  --l4: #fe3d16; /* informative_negative */
-  --shadow: 0 1px 2px rgba(19, 20, 23, 0.04), 0 10px 30px -12px rgba(19, 20, 23, 0.1);
-  --zone-alpha: 0.16;
-  color-scheme: light;
+.car-boot {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
 }
-.car-app[data-theme='night'] {
-  --bg: #0a0b0d;
-  --surface: #16171a;
-  --surface-2: #1f2024;
-  --surface-3: #2a2c31;
-  --line: #24262b;
-  --line-strong: #3a3c43;
-  --t1: #f7f8fa;
-  --t2: #c7c9ce;
-  --t3: #8d9097;
-  --t4: #5c5f66;
-  --accent: #3cf2c8;
-  --accent-2: #5ab8ff;
-  --accent-ink: #04130f;
-  --accent-soft: rgba(60, 242, 200, 0.1);
-  --l0: #2ee6a8;
-  --l1: #a7e34b;
-  --l2: #ffc93d;
-  --l3: #ff9a3c;
-  --l4: #ff4c28; /* informative_negative (dark) */
-  --shadow: none;
-  --zone-alpha: 0.2;
-  color-scheme: dark;
-}
-.car-app .l0, .car-app.l0 { --lv: var(--l0); }
-.car-app .l1, .car-app.l1 { --lv: var(--l1); }
-.car-app .l2, .car-app.l2 { --lv: var(--l2); }
-.car-app .l3, .car-app.l3 { --lv: var(--l3); }
-.car-app .l4, .car-app.l4 { --lv: var(--l4); }
-
-/* ── Shell ────────────────────────────────────────────────────────────────── */
 .car-app {
+  --c-bg: #07090d;
+  --ink-strong: #fff;
   position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
+  background: radial-gradient(120% 90% at 100% 100%, #0c1420 0%, var(--c-bg) 55%);
+  font-family: var(--pleos);
+  color: #f3f6fb;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
-  color: var(--t1);
-  font-family: var(--pleos);
-  font-feature-settings: 'tnum' 1;
-  letter-spacing: -0.01em;
-  transition: background 0.6s ease, color 0.6s ease;
+  border-radius: 28px;
 }
-.car-app.boot {
-  display: grid;
-  place-items: center;
+.car-ambient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: background 2s;
 }
-.car-app svg {
-  flex: none;
-}
-.car-app button {
-  font: inherit;
-  color: inherit;
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-
-/* ── Header ───────────────────────────────────────────────────────────────── */
-.car-app .hd {
-  flex: none;
-  height: 104px;
-  padding: 0 40px;
+.car-head {
+  position: relative;
+  height: 112px;
+  padding: 0 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex: none;
 }
-.car-app .hd-brand {
+.car-head .brand {
   display: flex;
   align-items: center;
-  gap: 14px;
-}
-.car-app .hd-brand > b {
-  font-size: 36px;
+  gap: 16px;
+  font-size: 40px;
   font-weight: 800;
-  letter-spacing: -0.03em;
 }
-.car-app .hd-chip {
-  margin-left: 18px;
-  height: 52px;
-  padding: 0 22px;
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  border-radius: 26px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--t2);
-}
-.car-app .hd-chip i {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--l2);
-}
-.car-app .hd-chip.live i {
-  background: var(--l0);
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--l0) 20%, transparent);
-}
-.car-app .hd-chip em {
+.car-head .brand em {
+  margin-left: 14px;
   font-style: normal;
-  color: var(--t3);
-  padding-left: 12px;
-  border-left: 1px solid var(--line-strong);
-}
-.car-app .hd-voice {
-  height: 64px;
-  padding: 0 26px 0 22px;
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  border-radius: 32px;
-  background: var(--surface);
-  border: 1px solid var(--line) !important;
-  font-size: 24px !important;
-  font-weight: 600 !important;
-  color: var(--t3) !important;
-  transition: transform 0.12s, background 0.2s;
-}
-.car-app .hd-voice.on {
-  color: var(--accent) !important;
-  background: var(--accent-soft);
-  border-color: transparent !important;
-}
-.car-app .hd-voice:active {
-  transform: scale(0.95);
-}
-
-/* ── Panels ───────────────────────────────────────────────────────────────── */
-.car-app .panel {
-  position: relative;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  box-shadow: var(--shadow);
-  padding: 28px 32px;
-  min-width: 0;
-}
-.car-app .panel-k {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   font-size: 24px;
-  font-weight: 700;
-  color: var(--t2);
-  letter-spacing: -0.01em;
-}
-.car-app .panel-k small {
-  font-size: 20px;
-  font-weight: 500;
-  color: var(--t4);
-}
-.car-app .panel-k > :last-child:not(:first-child) {
-  margin-left: auto;
-}
-.car-app .k-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  background: var(--surface-2);
-  color: var(--t2);
-}
-.car-app .k-icon.ok {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.car-app .lv-chip {
-  height: 48px;
-  padding: 0 20px 0 16px;
+  font-weight: 600;
+  color: #9aa7ba;
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  border-radius: 24px;
-  background: color-mix(in srgb, var(--lv) 13%, transparent);
-  color: var(--lv);
-  font-size: 24px;
-  font-weight: 800;
+  padding: 8px 18px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.05);
 }
-.car-app .lv-chip i {
+.car-head .brand em .dot {
   width: 12px;
   height: 12px;
-  border-radius: 50%;
-  background: var(--lv);
+  background: #ffd04a;
+}
+.car-head .brand em.live .dot {
+  background: #00e074;
+  box-shadow: 0 0 12px #00e074;
+}
+.head-right {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+}
+.voice-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 24px;
+  font-weight: 650;
+  height: 64px;
+  padding: 0 22px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #9aa7ba;
+}
+.voice-toggle.on {
+  color: #3cf2c8;
+  background: rgba(60, 242, 200, 0.1);
+}
+.clock {
+  font-size: 40px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-/* ── Drive layout ─────────────────────────────────────────────────────────── */
-.car-app .drive {
+/* ── Drive view ─────────────────────────────── */
+.drive {
+  position: relative;
   flex: 1;
-  min-height: 0;
   display: grid;
-  grid-template-columns: 760px minmax(0, 1fr);
-  gap: 24px;
-  padding: 0 40px;
+  grid-template-columns: 720px 1fr;
+  gap: 28px;
+  padding: 0 44px 0 30px;
+  min-height: 0;
 }
-.car-app .alert-panel {
+.ring-col {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-bottom: 20px;
+  justify-content: center;
 }
-.car-app .alert-panel > .panel-k {
-  align-self: stretch;
+.ring-desc {
+  margin: -30px 0 18px;
+  font-size: 30px;
+  font-weight: 700;
 }
-.car-app .side {
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 24px;
+.forecast {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  font-size: 26px;
+  color: #9aa7ba;
+  padding: 18px 28px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.forecast b {
+  font-size: 36px;
+}
+.side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  justify-content: center;
   min-height: 0;
 }
-
-/* Gauge */
-.car-app .gauge {
-  position: relative;
-  width: 560px;
-  height: 478px;
-  margin-top: 2px;
+.card {
+  border-radius: 28px;
+  padding: 28px 34px;
+  background: linear-gradient(180deg, rgba(30, 40, 58, 0.66), rgba(16, 22, 33, 0.66));
+  border: 1px solid rgba(160, 190, 230, 0.1);
 }
-.car-app .gauge svg {
-  position: absolute;
-  inset: 0 0 auto 0;
-  overflow: visible;
+.card-k {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 24px;
+  font-weight: 650;
+  color: #9aa7ba;
 }
-.car-app .g-zone {
-  fill: none;
-  stroke: var(--lv);
-  stroke-opacity: var(--zone-alpha);
-  stroke-linecap: butt;
-}
-.car-app .g-fill {
-  fill: none;
-  stroke: var(--lv);
-  stroke-linecap: round;
-  transition: stroke 0.8s;
-}
-.car-app .g-knob {
-  fill: var(--surface);
-  stroke: var(--lv);
-  stroke-width: 9;
-  filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--lv) 35%, transparent));
-}
-.car-app .g-tick {
-  font-size: 22px;
-  font-weight: 600;
-  fill: var(--t4);
-}
-.car-app .g-tick.warn {
-  fill: var(--l3);
-  font-weight: 800;
-}
-.car-app .g-ghost circle {
-  fill: none;
-  stroke: var(--t3);
-  stroke-width: 3;
-  stroke-dasharray: 5 5;
-}
-.car-app .g-ghost text {
+.card-k small {
   font-size: 20px;
-  font-weight: 700;
-  fill: var(--t3);
+  color: #5f6d82;
+  font-weight: 500;
 }
-.car-app .g-center {
+.rest-name {
+  font-size: 56px;
+  font-weight: 800;
+  margin: 8px 0 10px;
+  letter-spacing: -0.02em;
+}
+.rest-name.dim {
+  font-size: 36px;
+  color: #5f6d82;
+}
+.rest-meta {
+  display: flex;
+  gap: 30px;
+  align-items: baseline;
+  font-size: 28px;
+  color: #9aa7ba;
+}
+.rest-meta b {
+  font-size: 40px;
+  color: #fff;
+  margin-right: 4px;
+}
+.rest-meta .tag {
+  font-size: 22px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+}
+.rest-why {
+  margin: 14px 0 0;
+  font-size: 24px;
+  color: #7f8ca0;
+}
+.card.rest.ask {
+  border-color: rgba(255, 181, 71, 0.65);
+  box-shadow: 0 0 0 1px rgba(255, 181, 71, 0.3), 0 20px 60px rgba(255, 154, 60, 0.15);
+  background: linear-gradient(180deg, rgba(64, 44, 20, 0.6), rgba(22, 18, 14, 0.7));
+}
+.card.rest.ask .card-k {
+  color: #ffb547;
+}
+.card.rest.set {
+  border-color: rgba(60, 242, 200, 0.45);
+}
+.card.rest.set .card-k {
+  color: #3cf2c8;
+}
+.rest-actions {
+  display: flex;
+  gap: 18px;
+  margin-top: 22px;
+}
+.big {
+  height: 96px;
+  padding: 0 40px;
+  border-radius: 24px;
+  font-size: 32px;
+  font-weight: 750;
+  font-family: var(--pleos);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  transition: transform 0.12s, background 0.2s;
+}
+.big:active {
+  transform: scale(0.95);
+}
+.big.primary {
+  background: linear-gradient(135deg, #3cf2c8, #5ab8ff);
+  color: #031510;
+}
+.big.ghost {
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+}
+.big.wide {
+  width: 100%;
+}
+.rest-actions .big {
+  flex: 1;
+}
+
+.air-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.co2 {
+  font-size: 60px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.8s;
+}
+.co2 small {
+  font-size: 26px;
+  margin-left: 8px;
+  color: #7f8ca0;
+  font-weight: 600;
+}
+.mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 26px;
+  font-weight: 700;
+  padding: 14px 22px;
+  border-radius: 18px;
+}
+.mode.rec {
+  color: #ffb547;
+  background: rgba(255, 181, 71, 0.1);
+}
+.mode.fresh {
+  color: #3cf2c8;
+  background: rgba(60, 242, 200, 0.1);
+}
+.co2-bar {
+  position: relative;
+  height: 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 18px 0 40px;
+}
+.co2-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 8px;
+  transition: width 0.8s, background 0.8s;
+}
+.co2-bar span {
+  position: absolute;
+  top: 22px;
+  transform: translateX(-50%);
+  font-size: 20px;
+  color: #5f6d82;
+}
+.air-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 28px;
+  font-weight: 650;
+  color: #c6d0de;
+}
+.air-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.air-stats svg {
+  color: #7f8ca0;
+}
+.amb {
+  width: 36px;
+  height: 22px;
+  border-radius: 6px;
+  display: inline-block;
+  box-shadow: 0 0 14px currentColor;
+  transition: background 1.5s;
+}
+.card.actions {
+  padding: 22px 34px;
+}
+.act {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 26px;
+  margin-top: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.act i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: none;
+}
+.act-t {
+  color: #7f8ca0;
+  font-variant-numeric: tabular-nums;
+}
+.act-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.act.dim {
+  color: #5f6d82;
+}
+
+/* ── Parked / nap ───────────────────────────── */
+.parked,
+.nap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 60px;
+  padding: 0 60px;
+}
+.nap-hero {
+  max-width: 980px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 22px;
+  color: #ffb08a;
+}
+.nap-hero h1 {
+  margin: 0;
+  font-size: 60px;
+  color: #fff;
+}
+.nap-hero p {
+  margin: 0 0 10px;
+  font-size: 30px;
+  line-height: 1.5;
+  color: #b5c0cf;
+}
+.nap-opts {
+  display: flex;
+  gap: 18px;
+}
+.nap-opts .big {
+  width: 180px;
+}
+.nap {
+  background: radial-gradient(60% 60% at 30% 50%, rgba(255, 154, 90, 0.12), transparent 70%);
+}
+.nap.waking {
+  background: radial-gradient(60% 60% at 30% 50%, rgba(232, 244, 255, 0.18), transparent 70%);
+}
+.nap-side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 640px;
+}
+.nap-step {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 30px;
+  font-weight: 650;
+  padding: 22px 26px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #5f6d82;
+}
+.nap-step.on {
+  color: #fff;
+}
+.nap-step.on svg {
+  color: #ffb08a;
+}
+
+/* ── Voice bar & overlays ───────────────────── */
+.voicebar {
+  position: relative;
+  flex: none;
+  height: 104px;
+  margin: 10px 44px 30px;
+  border-radius: 28px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 0 30px;
+  font-size: 28px;
+  font-weight: 600;
+  color: #6f7c90;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.voicebar span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.voicebar.show {
+  color: #fff;
+  background: linear-gradient(90deg, rgba(60, 242, 200, 0.12), rgba(90, 184, 255, 0.06));
+  border-color: rgba(60, 242, 200, 0.25);
+}
+.orb {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  flex: none;
+  background: conic-gradient(from 0deg, #3cf2c8, #5ab8ff, #9b8cff, #3cf2c8);
+  filter: saturate(0.6) brightness(0.7);
+}
+.voicebar.show .orb {
+  filter: none;
+  animation: spin 2.4s linear infinite;
+  box-shadow: 0 0 30px rgba(60, 242, 200, 0.5);
+}
+.overlay {
   position: absolute;
   left: 0;
   right: 0;
-  top: 158px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-.car-app .g-label {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--t3);
-}
-.car-app .g-value {
-  font-size: 148px;
-  line-height: 1;
-  font-weight: 800;
-  letter-spacing: -0.05em;
-  margin-top: 6px;
-}
-.car-app .g-value small {
-  font-size: 36px;
-  font-weight: 600;
-  color: var(--t4);
-  letter-spacing: 0;
-  margin-left: 6px;
-}
-.car-app .g-desc {
-  margin-top: 14px;
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--lv);
-}
-
-/* Forecast strip */
-.car-app .forecast {
-  align-self: stretch;
-  margin-top: auto;
-  padding-top: 22px;
-  border-top: 1px solid var(--line);
-}
-.car-app .fc-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--t3);
-}
-.car-app .fc-head b {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--t1);
-}
-.car-app .fc-head b.warn {
-  color: var(--l3);
-}
-.car-app .fc-chart {
-  display: block;
-  margin-top: 10px;
-  overflow: visible;
-}
-.car-app .fc-area-top {
-  stop-color: var(--accent);
-  stop-opacity: 0.22;
-}
-.car-app .fc-area-bot {
-  stop-color: var(--accent);
-  stop-opacity: 0;
-}
-.car-app .fc-line {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 4;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-}
-.car-app .fc-danger {
-  fill: var(--l4);
-  fill-opacity: 0.06;
-}
-.car-app .fc-danger-line {
-  stroke: var(--l3);
-  stroke-width: 2;
-  stroke-dasharray: 6 6;
-}
-.car-app .fc-danger-label {
-  font-size: 18px;
-  font-weight: 700;
-  fill: var(--l3);
-}
-.car-app .fc-grid {
-  stroke: var(--line);
-  stroke-width: 2;
-}
-.car-app .fc-cross {
-  fill: var(--surface);
-  stroke: var(--l3);
-  stroke-width: 4;
-}
-.car-app .fc-stop line {
-  stroke: var(--t2);
-  stroke-width: 2;
-  stroke-dasharray: 3 5;
-}
-.car-app .fc-stop rect {
-  fill: var(--t1);
-}
-.car-app .fc-stop path {
-  fill: none;
-  stroke: var(--surface);
-  stroke-width: 3.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.car-app .fc-stop.set rect {
-  fill: var(--accent);
-}
-.car-app .fc-stop.set path {
-  stroke: var(--accent-ink);
-}
-.car-app .fc-now {
-  fill: var(--lv);
-  stroke: var(--surface);
-  stroke-width: 4;
-}
-.car-app .fc-time {
-  font-size: 20px;
-  font-weight: 600;
-  fill: var(--t4);
-}
-.car-app .fc-note {
-  margin: 6px 0 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 22px;
-  color: var(--t3);
-}
-.car-app .fc-note b {
-  color: var(--t1);
-  font-weight: 700;
-}
-
-/* Rest card */
-.car-app .rest {
-  display: flex;
-  flex-direction: column;
-}
-.car-app .rest.ask {
-  border-color: transparent;
-  box-shadow: 0 0 0 3px var(--accent), var(--shadow);
-}
-.car-app .rest.set {
-  background: linear-gradient(0deg, var(--accent-soft), var(--accent-soft)), var(--surface);
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
-}
-.car-app .stop-tag {
-  height: 36px;
-  padding: 0 14px;
-  display: inline-flex;
-  align-items: center;
-  border-radius: 10px;
-  background: var(--surface-2);
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--t3);
-}
-.car-app .rest-name {
-  margin: 14px 0 0;
-  font-size: 48px;
-  font-weight: 800;
-  letter-spacing: -0.035em;
-  line-height: 1.12;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.car-app .rest-name.dim {
-  color: var(--t4);
-  font-size: 36px;
-}
-.car-app .rest-meta {
-  margin-top: 14px;
-  display: flex;
-  align-items: baseline;
-  gap: 30px;
-}
-.car-app .metric {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-}
-.car-app .metric b {
-  font-size: 40px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-}
-.car-app .metric small {
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--t3);
-}
-.car-app .metric[class*=' l'] b {
-  color: var(--lv);
-}
-.car-app .rest-why {
-  margin: 14px 0 0;
-  font-size: 24px;
-  line-height: 1.45;
-  color: var(--t3);
-}
-.car-app .rest-actions {
-  margin-top: 22px;
-  display: grid;
-  grid-template-columns: 1.6fr 1fr;
-  gap: 14px;
-}
-
-/* Buttons (Pleos: shrink to 95 % on press) */
-.car-app .btn {
-  height: 88px;
-  padding: 0 30px;
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  border-radius: 22px;
-  background: var(--surface-2) !important;
-  font-size: 30px !important;
-  font-weight: 700 !important;
-  color: var(--t1) !important;
-  transition: transform 0.12s ease, filter 0.12s ease;
-}
-.car-app .btn:active {
-  transform: scale(0.95);
-}
-.car-app .btn.primary {
-  background: var(--accent) !important;
-  color: var(--accent-ink) !important;
-}
-.car-app .btn.danger {
-  background: var(--l4) !important;
-  color: #fff !important;
-}
-.car-app .btn.wide {
-  width: 100%;
-}
-
-/* Air card */
-.car-app .air {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 28px;
-  align-items: center;
-}
-.car-app .co2 {
-  margin-top: 8px;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.car-app .co2 b {
-  font-size: 72px;
-  font-weight: 800;
-  letter-spacing: -0.045em;
-  line-height: 1;
-}
-.car-app .co2 small {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--t3);
-}
-.car-app .co2 em {
-  margin-left: 10px;
-  font-style: normal;
-  font-size: 24px;
-  font-weight: 800;
-  padding: 6px 14px;
-  border-radius: 10px;
-}
-.car-app .co2.good em { color: var(--l0); background: color-mix(in srgb, var(--l0) 12%, transparent); }
-.car-app .co2.fair em { color: var(--l2); background: color-mix(in srgb, var(--l2) 14%, transparent); }
-.car-app .co2.poor em { color: var(--l3); background: color-mix(in srgb, var(--l3) 14%, transparent); }
-.car-app .co2.bad em { color: var(--l4); background: color-mix(in srgb, var(--l4) 14%, transparent); }
-.car-app .co2-bar {
-  position: relative;
-  margin-top: 22px;
-  height: 14px;
-}
-.car-app .co2-bar i {
-  position: absolute;
-  top: 0;
-  height: 14px;
-  border-radius: 7px;
-}
-.car-app .co2-bar i.good { background: var(--l0); opacity: 0.55; }
-.car-app .co2-bar i.fair { background: var(--l2); opacity: 0.55; }
-.car-app .co2-bar i.poor { background: var(--l3); opacity: 0.55; }
-.car-app .co2-bar i.bad { background: var(--l4); opacity: 0.55; }
-.car-app .co2-mark {
-  position: absolute;
-  top: -9px;
-  width: 32px;
-  height: 32px;
-  margin-left: -16px;
-  border-radius: 50%;
-  background: var(--surface);
-  border: 7px solid var(--t1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  transition: left 1s ease;
-}
-.car-app .air-tiles {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.car-app .tile {
-  height: 112px;
-  padding: 16px 18px;
-  border-radius: 18px;
-  background: var(--surface-2);
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto 1fr;
-  column-gap: 10px;
-  align-items: center;
-  color: var(--t3);
-}
-.car-app .tile span {
-  font-size: 20px;
-  font-weight: 600;
-}
-.car-app .tile b {
-  grid-column: 1 / -1;
-  align-self: end;
-  font-size: 32px;
-  font-weight: 800;
-  color: var(--t1);
-  letter-spacing: -0.02em;
-}
-.car-app .tile.on {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.car-app .tile.on b {
-  color: var(--accent);
-}
-.car-app .swatch {
-  display: inline-block;
-  width: 64px;
-  height: 28px;
-  border-radius: 8px;
-  border: 1px solid var(--line-strong);
-  vertical-align: middle;
-}
-
-/* Activity */
-.car-app .activity {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.car-app .activity ul {
-  list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
-}
-.car-app .activity li {
-  display: grid;
-  grid-template-columns: 14px 84px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 14px;
-  height: 64px;
-  border-bottom: 1px solid var(--line);
-  font-size: 26px;
-  font-weight: 600;
-}
-.car-app .activity li:last-child {
-  border-bottom: 0;
-}
-.car-app .activity li > i {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--lv);
-}
-.car-app .activity time {
-  color: var(--t4);
-  font-size: 22px;
-}
-.car-app .activity li > span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.car-app .activity em {
-  display: inline-flex;
-  gap: 6px;
-  color: var(--t3);
-}
-.car-app .activity em span {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--surface-2);
-  display: grid;
-  place-items: center;
-}
-.car-app .act-empty {
-  margin: 14px 0 0;
-  font-size: 24px;
-  color: var(--t4);
-}
-
-/* ── Parked ───────────────────────────────────────────────────────────────── */
-.car-app .parked {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 640px;
-  gap: 24px;
-  padding: 0 40px;
-}
-.car-app .parked-hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 18px;
-  padding: 40px 72px;
-}
-.car-app .moon {
-  width: 168px;
-  height: 168px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: #ff9a5a;
-  background: radial-gradient(circle at 35% 30%, rgba(255, 154, 90, 0.26), rgba(255, 154, 90, 0.06) 70%);
-}
-.car-app .parked-hero h1 {
-  margin: 6px 0 0;
-  font-size: 56px;
-  font-weight: 800;
-  letter-spacing: -0.035em;
-}
-.car-app .parked-hero p {
-  margin: 0 0 10px;
-  font-size: 26px;
-  line-height: 1.55;
-  color: var(--t3);
-}
-.car-app .parked-hero p b {
-  color: var(--lv);
-  font-weight: 800;
-}
-.car-app .seg {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  width: 100%;
-  padding: 6px;
-  border-radius: 24px;
-  background: var(--surface-2);
-}
-.car-app .seg button {
-  height: 76px;
-  border-radius: 18px;
-  font-size: 30px !important;
-  font-weight: 700 !important;
-  color: var(--t3) !important;
-  transition: transform 0.12s, background 0.2s;
-}
-.car-app .seg button.on {
-  background: var(--surface) !important;
-  color: var(--t1) !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-}
-.car-app .seg button:active {
-  transform: scale(0.95);
-}
-.car-app .parked-side {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-.car-app .nap-plan {
-  flex: 1;
-}
-.car-app .nap-plan ol {
-  list-style: none;
-  margin: 18px 0 0;
-  padding: 0;
-}
-.car-app .nap-plan li {
-  display: grid;
-  grid-template-columns: 64px 1fr;
-  align-items: center;
-  gap: 18px;
-  padding: 18px 0;
-  border-bottom: 1px solid var(--line);
-  color: var(--t3);
-}
-.car-app .nap-plan li:last-child {
-  border-bottom: 0;
-}
-.car-app .nap-plan li > svg {
-  width: 64px;
-  height: 64px;
-  padding: 16px;
-  border-radius: 18px;
-  background: var(--surface-2);
-  color: var(--t2);
-}
-.car-app .nap-plan li span {
-  font-size: 22px;
-  line-height: 1.4;
-}
-.car-app .nap-plan li b {
-  display: block;
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--t1);
-}
-
-/* ── Nap (always the dim night palette, warm accent) ─────────────────────── */
-.car-app.mode-napping,
-.car-app.mode-waking {
-  --bg: #07080a;
-  --surface: #121316;
-  --surface-2: #1b1c20;
-  --accent: #ff9a5a;
-  --accent-soft: rgba(255, 154, 90, 0.12);
-}
-.car-app.mode-waking {
-  --accent: #ffe7b8;
-}
-.car-app .nap {
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 700px 1fr;
-  align-items: center;
-  gap: 40px;
-  padding: 0 72px 0 40px;
-}
-.car-app .nap-dial {
-  position: relative;
-  width: 680px;
-  height: 680px;
-  justify-self: center;
-}
-.car-app .nd-track {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.06);
-  stroke-width: 16;
-}
-.car-app .nd-fill {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 16;
-  stroke-linecap: round;
-  transition: stroke-dasharray 1s linear, stroke 2s;
-}
-.car-app .nd-center {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.car-app .nd-center span {
-  font-size: 30px;
-  font-weight: 600;
-  color: var(--t3);
-}
-.car-app .nd-center b {
-  font-size: 156px;
-  font-weight: 800;
-  letter-spacing: -0.05em;
-  line-height: 1;
-  color: var(--t1);
-}
-.car-app .nd-center b svg {
-  color: var(--accent);
-}
-.car-app .nd-center em {
-  font-style: normal;
-  font-size: 26px;
-  color: var(--accent);
-  font-weight: 600;
-}
-.car-app .nap-side {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.car-app .nap-step {
-  height: 96px;
-  padding: 0 28px;
-  border-radius: 22px;
-  background: var(--surface);
-  display: grid;
-  grid-template-columns: 40px 1fr 32px;
-  align-items: center;
-  gap: 18px;
-  font-size: 28px;
-  font-weight: 600;
-  color: var(--t4);
-}
-.car-app .nap-step.on {
-  color: var(--t1);
-}
-.car-app .nap-step.on > svg:first-child {
-  color: var(--accent);
-}
-.car-app .nap-step.on > svg:last-child {
-  color: var(--accent);
-}
-.car-app .nap-side .btn {
-  margin-top: 12px;
-}
-
-/* ── Voice bar ────────────────────────────────────────────────────────────── */
-.car-app .voicebar {
-  flex: none;
-  margin: 24px 40px 32px;
-  height: 88px;
-  padding: 0 32px 0 22px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  border-radius: 44px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
-  font-size: 26px;
-  color: var(--t3);
-  transition: border-color 0.4s, color 0.4s;
-}
-.car-app .voicebar.speaking {
-  color: var(--t1);
-  font-weight: 600;
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
-}
-.car-app .vb-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.car-app .orb {
-  flex: none;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: conic-gradient(from 210deg, #3cf2c8, #5ab8ff, #a98bff, #ff9ad5, #3cf2c8);
-  -webkit-mask: radial-gradient(circle, #000 58%, transparent 60%);
-  mask: radial-gradient(circle, #000 58%, transparent 60%);
-  opacity: 0.85;
-}
-.car-app .voicebar.speaking .orb {
-  animation: car-orb 2.4s linear infinite;
-  opacity: 1;
-}
-@keyframes car-orb {
-  to {
-    transform: rotate(360deg);
-  }
-}
-.car-app.lv3 .voicebar.speaking,
-.car-app.lv4 .voicebar.speaking {
-  border-color: var(--l3);
-}
-
-/* ── Sheets (Pleos popup) ─────────────────────────────────────────────────── */
-.car-app .sheet {
-  position: absolute;
-  left: 50%;
-  bottom: 152px;
-  width: 1100px;
-  margin-left: -550px;
-  padding: 36px 44px 32px;
-  border-radius: 32px;
-  background: var(--surface);
-  border: 1px solid var(--line-strong);
-  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.45);
-  text-align: center;
-  animation: car-sheet-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
-  z-index: 10;
-}
-@keyframes car-sheet-in {
-  from {
-    transform: translateY(24px);
-    opacity: 0;
-  }
-}
-.car-app .sheet-k {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 0.02em;
-}
-.car-app .sheet h2 {
-  margin: 14px 0 0;
-  font-size: 44px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.25;
-}
-.car-app .sheet p {
-  margin: 12px 0 0;
-  font-size: 26px;
-  color: var(--t3);
-}
-.car-app .sheet-hint {
-  font-size: 22px !important;
-  color: var(--t4) !important;
-}
-.car-app .choices {
-  margin-top: 26px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-.car-app .choice {
-  height: 104px;
-  padding: 0 28px;
-  border-radius: 24px;
-  background: var(--surface-2) !important;
-  display: flex !important;
-  align-items: center;
-  gap: 18px;
-  font-size: 32px !important;
-  font-weight: 700 !important;
-  transition: transform 0.12s, background 0.3s;
-}
-.car-app .choice:active {
-  transform: scale(0.95);
-}
-.car-app .choice em {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
-  display: grid;
-  place-items: center;
-  font-style: normal;
-  font-size: 26px;
-  background: var(--surface);
-  color: var(--t3);
-}
-.car-app .choice.right {
-  background: color-mix(in srgb, var(--l0) 16%, var(--surface)) !important;
-  color: var(--l0) !important;
-}
-.car-app .choice.wrong {
-  background: color-mix(in srgb, var(--l4) 14%, var(--surface)) !important;
-  color: var(--l4) !important;
-}
-.car-app .choice.dim {
-  opacity: 0.4;
-}
-.car-app .probe-orb {
-  display: block;
-  margin: 26px auto 0;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--accent) 0 34%, color-mix(in srgb, var(--accent) 22%, transparent) 36% 100%);
-}
-.car-app .probe-orb.listening {
-  animation: car-probe 1s ease-in-out infinite;
-}
-@keyframes car-probe {
-  50% {
-    transform: scale(1.12);
-  }
-}
-.car-app .sheet h2.rt {
-  font-size: 120px;
-  letter-spacing: -0.05em;
-}
-.car-app .sheet h2.rt small {
-  font-size: 40px;
-  margin-left: 6px;
-  color: var(--t3);
-}
-.car-app .sheet h2.rt.ok {
-  color: var(--l0);
-}
-.car-app .sheet h2.rt.slow {
-  color: var(--l3);
-}
-
-/* ── Critical (L4 / vehicle attention warning) ───────────────────────────── */
-.car-app .critical {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  display: grid;
-  place-items: center;
-  background: color-mix(in srgb, var(--bg) 70%, transparent);
-  backdrop-filter: blur(10px);
-}
-.car-app .crit-card {
-  width: 860px;
-  padding: 52px 56px 44px;
+  margin: 0 auto;
+  z-index: 5;
+  bottom: 160px;
+  width: 1180px;
+  max-width: calc(100% - 80px);
+  padding: 40px 48px;
   border-radius: 36px;
-  background: var(--surface);
-  box-shadow: 0 0 0 4px var(--l4), 0 40px 100px -20px rgba(0, 0, 0, 0.5);
+  background: rgba(14, 20, 31, 0.94);
+  border: 1px solid rgba(160, 190, 230, 0.16);
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6);
   text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
 }
-.car-app .crit-icon {
-  width: 120px;
+.ov-k {
+  font-size: 24px;
+  color: #3cf2c8;
+  font-weight: 700;
+}
+.overlay h2 {
+  font-size: 48px;
+  margin: 14px 0 28px;
+}
+.choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+.choice {
   height: 120px;
+  border-radius: 26px;
+  font-size: 40px;
+  font-weight: 800;
+  font-family: var(--pleos);
+  background: rgba(255, 255, 255, 0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  transition: background 0.3s, opacity 0.3s;
+}
+.choice em {
+  font-style: normal;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  color: var(--l4);
-  background: color-mix(in srgb, var(--l4) 14%, transparent);
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 28px;
 }
-.car-app .crit-card h2 {
-  margin: 8px 0 0;
-  font-size: 56px;
-  font-weight: 800;
-  letter-spacing: -0.035em;
+.choice.right {
+  background: rgba(0, 224, 116, 0.25);
+  color: #6fffb4;
 }
-.car-app .crit-card p {
-  margin: 0 0 14px;
-  font-size: 26px;
-  color: var(--t3);
+.choice.wrong {
+  background: rgba(255, 76, 40, 0.22);
+}
+.choice.dim {
+  opacity: 0.35;
+}
+.ov-hint {
+  margin: 22px 0 0;
+  font-size: 24px;
+  color: #7f8ca0;
+}
+.probe-orb {
+  width: 160px;
+  height: 160px;
+  margin: 10px auto 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, #3cf2c8 0%, rgba(60, 242, 200, 0.1) 60%, transparent 70%);
+}
+.probe-orb.listening {
+  animation: pulse 0.8s ease-in-out infinite;
+}
+.overlay h2.rt {
+  font-size: 110px;
+  margin: 6px 0;
+}
+.overlay p {
+  font-size: 28px;
+  color: #b5c0cf;
 }
 
-/* ── Portrait window (840 × 1184 dp) ─────────────────────────────────────── */
-.car.portrait .hd {
-  height: 96px;
-  padding: 0 28px;
+/* level tint on the frame */
+.car-app.lv3 .voicebar.show,
+.car-app.lv4 .voicebar.show {
+  background: linear-gradient(90deg, rgba(255, 154, 60, 0.2), rgba(255, 59, 79, 0.08));
+  border-color: rgba(255, 154, 60, 0.45);
 }
-.car.portrait .hd-chip em,
-.car.portrait .hd-voice {
-  font-size: 0 !important;
-  gap: 0;
+
+/* ── Portrait window (840 × 1184 dp) ───────── */
+.car.portrait .car-head {
+  padding: 0 30px;
 }
-.car.portrait .hd-voice {
-  width: 64px;
-  padding: 0;
-  justify-content: center;
+.car.portrait .car-head .brand em {
+  display: none;
 }
 .car.portrait .drive {
   grid-template-columns: 1fr;
-  grid-template-rows: auto auto;
-  align-content: start;
-  gap: 18px;
-  padding: 0 28px;
-  overflow: hidden;
+  grid-template-rows: auto 1fr;
+  padding: 0 30px;
+  gap: 10px;
 }
-.car.portrait .alert-panel {
-  padding: 22px 26px 18px;
+.car.portrait .ring-col svg {
+  width: 470px;
+  height: 470px;
 }
-.car.portrait .gauge {
-  width: 440px;
-  height: 376px;
+.car.portrait .ring-desc {
+  margin-top: -24px;
 }
-.car.portrait .gauge svg {
-  transform: scale(0.7857);
-  transform-origin: top left;
+.car.portrait .forecast {
+  font-size: 22px;
 }
-.car.portrait .g-center {
-  top: 118px;
-}
-.car.portrait .g-value {
-  font-size: 116px;
-}
-.car.portrait .fc-chart {
-  width: 100%;
-  height: auto;
-}
-.car.portrait .fc-note {
-  display: none;
-}
-.car.portrait .side {
-  grid-template-rows: auto;
-}
-.car.portrait .air,
-.car.portrait .activity {
+.car.portrait .card.actions {
   display: none;
 }
 .car.portrait .rest-name {
-  font-size: 42px;
-}
-.car.portrait .voicebar {
-  margin: 18px 28px 24px;
-  font-size: 22px;
-}
-.car.portrait .parked {
-  grid-template-columns: 1fr;
-  padding: 0 28px;
-}
-.car.portrait .parked-side {
-  display: none;
-}
-.car.portrait .parked-hero {
-  padding: 36px 40px;
-}
-.car.portrait .parked-hero h1 {
   font-size: 44px;
 }
+.car.portrait .voicebar {
+  margin: 10px 30px 24px;
+  font-size: 24px;
+}
+.car.portrait .parked,
 .car.portrait .nap {
-  grid-template-columns: 1fr;
-  padding: 0 28px;
-  gap: 18px;
-  align-content: center;
+  flex-direction: column;
+  gap: 24px;
 }
-.car.portrait .nap-dial {
-  width: 520px;
-  height: 520px;
+.car.portrait .nap svg {
+  width: 460px;
+  height: 460px;
 }
-.car.portrait .nap-dial svg {
-  width: 520px;
-  height: 520px;
+.car.portrait .nap-side {
+  width: 100%;
 }
-.car.portrait .nd-center b {
-  font-size: 120px;
-}
-.car.portrait .sheet {
-  width: 784px;
-  margin-left: -392px;
-  bottom: 136px;
+.car.portrait .overlay {
+  bottom: 150px;
 }
 .car.portrait .choices {
   grid-template-columns: 1fr;
 }
-.car.portrait .crit-card {
-  width: 760px;
-}
 
-/* Trip summary inside the activity card */
-.car-app .trip {
-  margin-top: 16px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+/* ── Day theme (Pleos light mode): same design, light surfaces ───────────── */
+.car-app[data-theme='day'] {
+  --ink-strong: #131417;
+  --l0: #00a389;
+  --l1: #5a9e10;
+  --l2: #d18f00;
+  --l3: #ea640c;
+  --l4: #e8320f;
+  background: radial-gradient(120% 90% at 100% 100%, #e3ecf6 0%, #f5f7fa 55%);
+  color: #131417;
 }
-.car-app .trip .metric {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 16px 20px;
-  border-radius: 18px;
-  background: var(--surface-2);
+.car-app[data-theme='day'] .car-head .brand em {
+  color: #5b6678;
+  background: rgba(19, 20, 23, 0.05);
 }
-.car-app .trip .metric b {
-  font-size: 36px;
+.car-app[data-theme='day'] .car-head .brand em.live .dot {
+  background: #02c265;
+  box-shadow: 0 0 10px rgba(2, 194, 101, 0.6);
 }
-.car-app .trip .metric small {
-  font-size: 20px;
+.car-app[data-theme='day'] .voice-toggle {
+  color: #5b6678;
+  background: rgba(19, 20, 23, 0.05);
 }
-.car-app .act-k {
-  margin-top: 20px;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--t3);
+.car-app[data-theme='day'] .voice-toggle.on {
+  color: #00a389;
+  background: rgba(0, 163, 137, 0.1);
 }
-.car-app .activity .act-empty {
-  margin-top: 8px;
+.car-app[data-theme='day'] .forecast {
+  color: #5b6678;
+  background: rgba(19, 20, 23, 0.04);
 }
-
-/* ── Fit refinements ─────────────────────────────────────────────────────── */
-.car-app .air-line {
-  display: none;
+.car-app[data-theme='day'] .card {
+  background: linear-gradient(180deg, #ffffff, #fbfcfe);
+  border-color: rgba(19, 20, 23, 0.07);
+  box-shadow: 0 1px 2px rgba(19, 20, 23, 0.04), 0 14px 34px -16px rgba(19, 40, 70, 0.2);
 }
-.car-app .trip .metric {
-  padding: 12px 18px;
+.car-app[data-theme='day'] .card-k {
+  color: #5b6678;
 }
-.car-app .trip .metric b {
-  font-size: 32px;
+.car-app[data-theme='day'] .card-k small {
+  color: #8a94a6;
 }
-.car-app .act-k {
-  margin-top: 16px;
+.car-app[data-theme='day'] .rest-name.dim {
+  color: #a4a8ae;
 }
-.car-app .activity ul {
-  margin-top: 4px;
+.car-app[data-theme='day'] .rest-meta {
+  color: #5b6678;
 }
-.car-app .activity li {
-  height: 58px;
+.car-app[data-theme='day'] .rest-meta b {
+  color: #131417;
 }
-.car-app .rest-actions .btn {
-  height: 84px;
+.car-app[data-theme='day'] .rest-meta .tag {
+  background: rgba(19, 20, 23, 0.06);
 }
-
-/* Portrait: compact instrument + one-line cabin summary instead of the air card */
-.car.portrait .gauge {
-  width: 400px;
-  height: 330px;
+.car-app[data-theme='day'] .rest-why {
+  color: #6b7587;
 }
-.car.portrait .gauge svg {
-  transform: scale(0.714);
+.car-app[data-theme='day'] .card.rest.ask {
+  border-color: rgba(234, 140, 20, 0.55);
+  box-shadow: 0 0 0 1px rgba(234, 140, 20, 0.25), 0 20px 50px rgba(234, 140, 20, 0.14);
+  background: linear-gradient(180deg, #fff6ea, #ffffff);
 }
-.car.portrait .g-center {
-  top: 104px;
+.car-app[data-theme='day'] .card.rest.ask .card-k {
+  color: #c46a00;
 }
-.car.portrait .g-label {
-  font-size: 20px;
+.car-app[data-theme='day'] .card.rest.set {
+  border-color: rgba(0, 163, 137, 0.45);
 }
-.car.portrait .g-value {
-  font-size: 100px;
+.car-app[data-theme='day'] .card.rest.set .card-k {
+  color: #00a389;
 }
-.car.portrait .g-value small {
-  font-size: 28px;
+.car-app[data-theme='day'] .big {
+  background: rgba(19, 20, 23, 0.06);
+  color: #131417;
 }
-.car.portrait .g-desc {
-  font-size: 22px;
-  margin-top: 8px;
+.car-app[data-theme='day'] .big.primary {
+  background: linear-gradient(135deg, #00b894, #2e8bff);
+  color: #fff;
 }
-.car.portrait .g-ghost text {
-  display: none;
+.car-app[data-theme='day'] .big.ghost {
+  background: transparent;
+  border-color: rgba(19, 20, 23, 0.14);
 }
-.car.portrait .forecast {
-  padding-top: 14px;
+.car-app[data-theme='day'] .co2 small {
+  color: #6b7587;
 }
-.car.portrait .fc-head b {
-  font-size: 24px;
+.car-app[data-theme='day'] .mode.rec {
+  color: #c46a00;
+  background: rgba(234, 140, 20, 0.1);
 }
-.car.portrait .fc-head span {
-  font-size: 20px;
+.car-app[data-theme='day'] .mode.fresh {
+  color: #00a389;
+  background: rgba(0, 163, 137, 0.1);
 }
-.car.portrait .side {
-  gap: 18px;
+.car-app[data-theme='day'] .co2-bar {
+  background: rgba(19, 20, 23, 0.07);
 }
-.car.portrait .air-line {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 18px 24px;
-  font-size: 22px;
-  color: var(--t3);
+.car-app[data-theme='day'] .co2-bar span,
+.car-app[data-theme='day'] .air-stats svg,
+.car-app[data-theme='day'] .act-t,
+.car-app[data-theme='day'] .ov-hint {
+  color: #8a94a6;
 }
-.car-app .air-line .al-k {
-  font-weight: 700;
-  color: var(--t2);
+.car-app[data-theme='day'] .air-stats {
+  color: #2b3240;
 }
-.car-app .air-line .co2v {
-  font-size: 34px;
-  font-weight: 800;
-  color: var(--t1);
-  letter-spacing: -0.03em;
+.car-app[data-theme='day'] .act.dim {
+  color: #a4a8ae;
 }
-.car-app .air-line .co2v small {
-  font-size: 18px;
-  color: var(--t3);
-  margin-left: 4px;
+.car-app[data-theme='day'] .nap-hero {
+  color: #e07a3e;
 }
-.car-app .air-line > em.co2 {
-  font-style: normal;
-  display: contents;
+.car-app[data-theme='day'] .nap-hero h1 {
+  color: #131417;
 }
-.car-app .air-line > em.co2 em {
-  font-style: normal;
-  font-size: 20px;
-  font-weight: 800;
-  padding: 4px 10px;
-  border-radius: 8px;
+.car-app[data-theme='day'] .nap-hero p,
+.car-app[data-theme='day'] .overlay p {
+  color: #5b6678;
 }
-.car-app .air-line .al-mode,
-.car-app .air-line .al-temp {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
+.car-app[data-theme='day'] .voicebar {
+  color: #6b7587;
+  background: #ffffff;
+  border-color: rgba(19, 20, 23, 0.07);
+  box-shadow: 0 10px 30px -18px rgba(19, 40, 70, 0.25);
 }
-.car-app .air-line .al-mode {
-  margin-left: auto;
+.car-app[data-theme='day'] .voicebar.show {
+  color: #131417;
+  background: linear-gradient(90deg, rgba(0, 184, 148, 0.12), rgba(46, 139, 255, 0.06)), #ffffff;
+  border-color: rgba(0, 163, 137, 0.35);
 }
-.car-app .air-line .al-mode.on {
-  color: var(--accent);
+.car-app[data-theme='day'] .orb {
+  filter: saturate(0.85) brightness(0.95);
 }
-.car.portrait .rest {
-  padding: 22px 26px;
+.car-app[data-theme='day'] .voicebar.show .orb {
+  filter: none;
+  box-shadow: 0 0 22px rgba(0, 184, 148, 0.4);
 }
-.car.portrait .rest-name {
-  margin-top: 10px;
-  font-size: 40px;
+.car-app[data-theme='day'].lv3 .voicebar.show,
+.car-app[data-theme='day'].lv4 .voicebar.show {
+  background: linear-gradient(90deg, rgba(234, 100, 12, 0.14), rgba(232, 50, 15, 0.05)), #ffffff;
+  border-color: rgba(234, 100, 12, 0.45);
 }
-.car.portrait .metric b {
-  font-size: 34px;
+.car-app[data-theme='day'] .overlay {
+  background: rgba(255, 255, 255, 0.97);
+  border-color: rgba(19, 20, 23, 0.08);
+  box-shadow: 0 40px 120px rgba(19, 40, 70, 0.25);
+  color: #131417;
 }
-.car.portrait .rest-meta {
-  margin-top: 8px;
-  gap: 22px;
+.car-app[data-theme='day'] .ov-k {
+  color: #00a389;
 }
-.car.portrait .rest-why {
-  display: none;
+.car-app[data-theme='day'] .choice {
+  background: rgba(19, 20, 23, 0.05);
+  color: #131417;
 }
-.car.portrait .rest-actions {
-  margin-top: 16px;
+.car-app[data-theme='day'] .choice em {
+  background: rgba(19, 20, 23, 0.08);
 }
-.car.portrait .rest-actions .btn {
-  height: 76px;
-  font-size: 28px !important;
+.car-app[data-theme='day'] .choice.right {
+  background: rgba(2, 168, 92, 0.14);
+  color: #02874a;
 }
-
-/* Portrait budget: 1184 dp = header 88 + content + voice 124 */
-.car.portrait .hd {
-  height: 88px;
+.car-app[data-theme='day'] .choice.wrong {
+  background: rgba(232, 50, 15, 0.12);
 }
-.car.portrait .drive,
-.car.portrait .side {
-  gap: 14px;
-}
-.car.portrait .alert-panel {
-  padding: 18px 24px 14px;
-}
-.car.portrait .lv-chip {
-  height: 42px;
-  font-size: 22px;
-}
-.car.portrait .gauge {
-  width: 360px;
-  height: 296px;
-}
-.car.portrait .gauge svg {
-  transform: scale(0.643);
-}
-.car.portrait .g-center {
-  top: 92px;
-}
-.car.portrait .g-value {
-  font-size: 92px;
-}
-.car.portrait .g-desc {
-  font-size: 21px;
-}
-.car.portrait .fc-chart {
-  margin-top: 6px;
-}
-.car.portrait .air-line {
-  padding: 14px 22px;
-}
-.car.portrait .rest {
-  padding: 18px 24px;
-}
-.car.portrait .rest .k-icon {
-  width: 38px;
-  height: 38px;
-}
-.car.portrait .rest-name {
-  font-size: 38px;
-  margin-top: 6px;
-}
-.car.portrait .rest-actions {
-  margin-top: 12px;
-}
-.car.portrait .rest-actions .btn {
-  height: 72px;
-}
-.car.portrait .voicebar {
-  margin: 14px 28px 22px;
-  height: 80px;
-}
-
-/* Cabin ambient light echoed on screen (night only): the instrument and the cabin glow together. */
-.car-app[data-theme='night'] .alert-panel {
-  background:
-    radial-gradient(70% 55% at 50% 34%, color-mix(in srgb, var(--amb) 9%, transparent), transparent 70%),
-    var(--surface);
-  transition: background 2s ease;
+.car-app[data-theme='day'] .probe-orb {
+  background: radial-gradient(circle, #00a389 0%, rgba(0, 163, 137, 0.12) 60%, transparent 70%);
 }

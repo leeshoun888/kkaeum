@@ -30,6 +30,34 @@ export function kssColor(kss: number): string {
   return `rgb(${stops[stops.length - 1][1].join(',')})`
 }
 
+/** Day theme (light Pleos palette): same ramp, darker so it reads on white. */
+export function kssColorDay(kss: number): string {
+  const stops: [number, [number, number, number]][] = [
+    [1, [0, 163, 137]],
+    [5, [90, 158, 16]],
+    [6, [209, 143, 0]],
+    [7, [234, 100, 12]],
+    [8.5, [232, 50, 15]],
+  ]
+  if (kss <= stops[0][0]) return `rgb(${stops[0][1].join(',')})`
+  for (let i = 1; i < stops.length; i++) {
+    if (kss <= stops[i][0]) {
+      const [k0, c0] = stops[i - 1]
+      const [k1, c1] = stops[i]
+      const f = (kss - k0) / (k1 - k0)
+      return `rgb(${c0.map((c, j) => Math.round(c + (c1[j] - c) * f)).join(',')})`
+    }
+  }
+  return `rgb(${stops[stops.length - 1][1].join(',')})`
+}
+
+export function co2ColorDay(ppm: number): string {
+  if (ppm < 1000) return '#00A389'
+  if (ppm < 2000) return '#D18F00'
+  if (ppm < 3500) return '#EA640C'
+  return '#E8320F'
+}
+
 export function co2Color(ppm: number): string {
   if (ppm < 1000) return '#3CF2C8'
   if (ppm < 2000) return '#FFD04A'

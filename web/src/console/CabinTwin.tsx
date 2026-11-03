@@ -153,17 +153,23 @@ const C_RECIRC = new THREE.Color('#9B8CFF')
 const C_PASSENGER = new THREE.Color('#5AB8FF')
 
 /* ════════════════════════════════════════════════════════════════════════
- * Procedural SUV body: lofted superellipse cross-sections along X
+ * Procedural body modelled on the Hyundai IONIQ 5 (the Pleos Connect emulator's
+ * vehicle): lofted superellipse cross-sections along X, 1 unit ≈ 0.958 m.
+ * Real figures → model: length 4,635 → 4.84, wheelbase 3,000 → 3.13,
+ * overhangs 845 / 790 → 0.88 / 0.825, height 1,605 → 1.675, width 1,890 → 1.97,
+ * track 1,638 → 1.71, tyre 255/45R20 (Ø737) → r 0.385.
+ * Character: flat roof, near-vertical hatch, short clamshell hood, squared
+ * wheel arches, diagonal "Z" door line, parametric-pixel lamps.
  * ════════════════════════════════════════════════════════════════════════ */
 
 const HALF_L = 2.42
-const BELT_Y = 1.12
-const SQ_N = 3.2 // superellipse exponent of the cross-section
-const WHEEL_X = [1.42, -1.42]
-const WHEEL_Y = 0.36
-const WHEEL_R = 0.35
-const ARCH_R = 0.47
-const TRACK_Z = 0.8
+const BELT_Y = 1.05
+const SQ_N = 4.2 // superellipse exponent of the cross-section (higher = boxier)
+const WHEEL_X = [1.54, -1.595]
+const WHEEL_Y = 0.385
+const WHEEL_R = 0.385
+const ARCH_R = 0.5
+const TRACK_Z = 0.855
 
 /** Fritsch–Carlson monotone cubic interpolation (no overshoot on the roofline). */
 function monotone(xs: number[], ys: number[]) {
@@ -207,43 +213,55 @@ function monotone(xs: number[], ys: number[]) {
   }
 }
 
-// Roofline, rear → front (x ascending)
+// Roofline, rear → front (x ascending): upright hatch with a lip spoiler, long flat roof,
+// fast windscreen, short clamshell hood falling to a blunt, squared nose.
 const TOP_PTS: [number, number][] = [
-  [-2.42, 0.94],
-  [-2.37, 1.24],
-  [-2.22, 1.5],
-  [-1.92, 1.645],
-  [-1.2, 1.7],
-  [-0.3, 1.7],
-  [0.22, 1.645],
-  [0.55, 1.47],
-  [0.86, 1.27],
-  [1.1, 1.13],
-  [1.5, 1.075],
-  [2.0, 1.015],
-  [2.3, 0.92],
-  [2.42, 0.78],
+  [-2.42, 1.2],
+  [-2.405, 1.42],
+  [-2.36, 1.59],
+  [-2.27, 1.652],
+  [-1.6, 1.668],
+  [-0.4, 1.675],
+  [0.02, 1.664],
+  [0.28, 1.6],
+  [0.58, 1.455],
+  [0.92, 1.262],
+  [1.22, 1.104],
+  [1.45, 1.074],
+  [1.85, 1.046],
+  [2.24, 1.012],
+  [2.37, 0.976],
+  [2.42, 0.94],
 ]
 const topAt = monotone(
   TOP_PTS.map((p) => p[0]),
   TOP_PTS.map((p) => p[1]),
 )
 
+/** Squared IONIQ 5 wheel-arch opening: flat top, chamfered corners. */
+function archTop(dx: number) {
+  const a = Math.abs(dx)
+  if (a >= ARCH_R) return -Infinity
+  const flat = ARCH_R * 0.6
+  if (a <= flat) return WHEEL_Y + ARCH_R * 0.98
+  const f = (a - flat) / (ARCH_R - flat)
+  return WHEEL_Y + ARCH_R * (0.98 - 0.5 * Math.pow(f, 1.6))
+}
+
 function botAt(x: number) {
-  let b = 0.4 + 0.2 * sstep(1.9, 2.42, Math.abs(x))
-  for (const cx of WHEEL_X) {
-    const dx = x - cx
-    if (Math.abs(dx) < ARCH_R) b = Math.max(b, WHEEL_Y + Math.sqrt(ARCH_R * ARCH_R - dx * dx))
-  }
+  let b = 0.4 + 0.1 * sstep(2.05, 2.42, x) + 0.12 * sstep(1.95, 2.42, -x)
+  for (const cx of WHEEL_X) b = Math.max(b, archTop(x - cx))
   return b
 }
-const widthAt = (x: number) => 0.96 * (1 - 0.1 * sstep(1.35, 2.42, Math.abs(x)))
-const tumble = (y: number) => 1 - 0.17 * sstep(BELT_Y, 1.72, y)
+const widthAt = (x: number) => 0.985 * (1 - 0.07 * sstep(1.55, 2.42, x) - 0.04 * sstep(1.7, 2.42, -x))
+const tumble = (y: number) => 1 - 0.15 * sstep(BELT_Y, 1.7, y)
 
 function profile(x: number) {
   const ax = Math.min(1, Math.abs(x) / HALF_L)
-  const sh = Math.max(0.02, Math.sqrt(1 - Math.pow(ax, 12)))
-  const sw = Math.max(0.02, Math.sqrt(1 - Math.pow(ax, 6)))
+  // The hatch is almost flat (high exponent); the nose rounds off a little more.
+  const e = x < 0 ? 26 : 22
+  const sh = Math.max(0.02, Math.sqrt(1 - Math.pow(ax, e)))
+  const sw = Math.max(0.02, Math.sqrt(1 - Math.pow(ax, x < 0 ? 14 : 12)))
   const top = topAt(x)
   const bot = botAt(x)
   const cy = (top + bot) / 2
@@ -268,7 +286,17 @@ function surfacePoint(x: number, theta: number, out: THREE.Vector3) {
   return out.set(x, y, z)
 }
 
-function buildBodyGeometry(U = 150, V = 72) {
+/** Outermost body x (front: max, rear: min) at height y and half-width |z|. */
+function faceX(y: number, z: number, front: boolean) {
+  const dir = front ? -1 : 1
+  for (let x = front ? HALF_L : -HALF_L; Math.abs(x) > 1.6; x += dir * 0.002) {
+    const p = profile(x)
+    if (y > p.bot && y < p.top && sideZ(x, y) >= Math.abs(z)) return x
+  }
+  return front ? 1.6 : -1.6
+}
+
+function buildBodyGeometry(U = 170, V = 80) {
   const pos = new Float32Array(U * V * 3)
   const v = new THREE.Vector3()
   for (let i = 0; i < U; i++) {
@@ -312,9 +340,14 @@ function buildFeatureLines() {
   }
   const OUT = 1.006
   const onSide = (x: number, y: number, side: number) => new THREE.Vector3(x, y, side * sideZ(x, y) * OUT)
+  const line = (arr: number[], x0: number, y0: number, x1: number, y1: number, side: number, n = 24) => {
+    const pts: THREE.Vector3[] = []
+    for (let k = 0; k <= n; k++) pts.push(onSide(x0 + ((x1 - x0) * k) / n, y0 + ((y1 - y0) * k) / n, side))
+    pushPath(arr, pts)
+  }
 
   // Cross-section ribs
-  for (const x of [-2.05, -1.55, -0.95, -0.35, 0.25, 0.85, 1.42, 1.95]) {
+  for (const x of [-2.1, -1.6, -1.0, -0.4, 0.2, 0.8, 1.4, 2.0]) {
     const pts: THREE.Vector3[] = []
     for (let j = 0; j <= 64; j++) pts.push(surfacePoint(x, (Math.PI * 2 * j) / 64, new THREE.Vector3()))
     pushPath(faint, pts)
@@ -330,32 +363,28 @@ function buildFeatureLines() {
     pushPath(faint, pts)
   }
 
-  // Find where the daylight opening meets the A-pillar
-  const dloTop = (x: number) => topAt(x) - 0.075
+  // Daylight opening: windscreen base (cowl) to the rear quarter glass
+  const dloTop = (x: number) => topAt(x) - 0.07
   let xf = 0.2
   for (let x = 0.2; x < 1.4; x += 0.005) if (dloTop(x) > BELT_Y + 0.03) xf = x
-  const xr = -2.02
+  const xr = -2.12
 
   for (const side of [-1, 1]) {
-    // Beltline
+    // Beltline (straight, IONIQ 5 keeps it flat to the hatch)
     const belt: THREE.Vector3[] = []
-    for (let x = -2.28; x <= 1.12; x += 0.04) belt.push(onSide(x, BELT_Y - 0.01, side))
+    for (let x = -2.3; x <= 1.0; x += 0.04) belt.push(onSide(x, BELT_Y - 0.01, side))
     pushPath(strong, belt)
-    // Shoulder / character line
-    const shoulder: THREE.Vector3[] = []
-    for (let x = -2.3; x <= 2.25; x += 0.04) {
-      const y = Math.min(BELT_Y - 0.2, topAt(x) - 0.12)
-      if (y > botAt(x) + 0.08) shoulder.push(onSide(x, y, side))
-    }
-    pushPath(faint, shoulder)
     // Daylight opening
     const dlo: THREE.Vector3[] = []
-    for (let x = xr + 0.14; x <= xf; x += 0.04) dlo.push(onSide(x, BELT_Y + 0.025, side))
+    for (let x = xr + 0.1; x <= xf; x += 0.04) dlo.push(onSide(x, BELT_Y + 0.025, side))
     for (let x = xf; x >= xr; x -= 0.03) dlo.push(onSide(x, Math.max(BELT_Y + 0.025, dloTop(x)), side))
     pushPath(strong, dlo, true)
-    // B / C pillars (paired lines)
-    for (const px of [-0.08, -1.18]) {
-      for (const off of [-0.045, 0.045]) {
+    // B pillar (paired) and the broad C pillar ahead of the quarter glass
+    for (const [px, w] of [
+      [-0.22, 0.045],
+      [-1.5, 0.11],
+    ] as const) {
+      for (const off of [-w, w]) {
         const x = px + off
         const pl: THREE.Vector3[] = []
         for (let y = BELT_Y + 0.025; y <= dloTop(x); y += 0.03) pl.push(onSide(x, y, side))
@@ -363,21 +392,63 @@ function buildFeatureLines() {
         pushPath(strong, pl)
       }
     }
-    // Wheel arches
+    // Clamshell hood shut line: wraps from the nose along the fender to the A-pillar base
+    const clam: THREE.Vector3[] = []
+    for (let x = 2.32; x >= 1.2; x -= 0.03) clam.push(onSide(x, topAt(x) - 0.045, side))
+    pushPath(strong, clam)
+    // Diagonal "Z" character line across the doors (low at the front door, rising toward the rear arch)
+    line(strong, 0.98, 0.6, -1.1, 0.96, side, 40)
+    line(faint, -1.1, 0.96, -1.42, 0.96, side, 8)
+    // Door shut lines
+    for (const [x0, x1] of [
+      [0.98, 0.92],
+      [-0.22, -0.24],
+      [-1.27, -1.33],
+    ] as const)
+      line(faint, x0, 0.47, x1, BELT_Y - 0.02, side, 12)
+    // Squared wheel arches with their black cladding edge
     for (const cx of WHEEL_X) {
       const arch: THREE.Vector3[] = []
-      for (let k = 0; k <= 40; k++) {
-        const a = (Math.PI * k) / 40
-        const x = cx + (ARCH_R + 0.03) * Math.cos(a)
-        const y = Math.max(WHEEL_Y + (ARCH_R + 0.03) * Math.sin(a), botAt(x) + 0.05)
-        arch.push(onSide(x, y, side))
+      for (let k = 0; k <= 48; k++) {
+        const dx = -ARCH_R + (2 * ARCH_R * k) / 48
+        const y = Math.max(archTop(dx * 0.999) + 0.035, 0.44)
+        arch.push(onSide(cx + dx * 1.05, y, side))
       }
       pushPath(strong, arch)
     }
-    // Rocker
-    const rocker: THREE.Vector3[] = []
-    for (let x = -0.92; x <= 0.92; x += 0.05) rocker.push(onSide(x, 0.47, side))
-    pushPath(faint, rocker)
+    // Rocker / lower cladding
+    line(faint, -1.05, 0.5, 1.0, 0.5, side, 30)
+    // Side mirror (on the door, just behind the A-pillar base)
+    const mz = side * (sideZ(1.12, 1.12) + 0.02)
+    const mo = side * 0.17
+    const m = [
+      [1.2, 1.1, mz],
+      [1.2, 1.21, mz],
+      [1.08, 1.22, mz + mo],
+      [1.06, 1.12, mz + mo],
+    ].map(([x, y, z]) => new THREE.Vector3(x, y, z))
+    pushPath(strong, m, true)
+  }
+
+  // Rear lip spoiler across the roof end
+  const sp: THREE.Vector3[] = []
+  for (let z = -0.72; z <= 0.72; z += 0.06) sp.push(new THREE.Vector3(-2.345, 1.655, z))
+  pushPath(strong, sp)
+  // Tailgate glass bottom and the black pixel-lamp band
+  for (const y of [1.2, 1.065, 0.94]) {
+    const pts: THREE.Vector3[] = []
+    for (let z = -0.84; z <= 0.84; z += 0.04) pts.push(new THREE.Vector3(faceX(y, z, false) - 0.004, y, z))
+    pushPath(y === 1.2 ? strong : faint, pts)
+  }
+  // Front: clamshell leading edge and the lower intake
+  for (const [y, w, arr] of [
+    [0.93, 0.84, strong],
+    [0.62, 0.6, faint],
+    [0.5, 0.66, faint],
+  ] as const) {
+    const pts: THREE.Vector3[] = []
+    for (let z = -w; z <= w + 1e-6; z += 0.04) pts.push(new THREE.Vector3(faceX(y, z, true) + 0.004, y, z))
+    pushPath(arr, pts)
   }
 
   const mk = (arr: number[]) => {
@@ -388,16 +459,37 @@ function buildFeatureLines() {
   return [mk(strong), mk(faint)] as const
 }
 
+/**
+ * Parametric-pixel lamps: a grid of small squares on the body face.
+ * Front: one rectangular cluster at each corner. Rear: a cluster at each end of the tailgate band
+ * plus a thin row of pixels joining them.
+ */
 function lightBar(front: boolean) {
-  const pts: THREE.Vector3[] = []
-  const y = front ? 0.84 : 1.17
-  for (let k = 0; k <= 24; k++) {
-    const u = k / 24 - 0.5 // -0.5..0.5
-    const z = u * 1.5
-    const x = front ? 2.34 - 0.32 * Math.pow(Math.abs(u) * 2, 2.4) : -2.355 + 0.24 * Math.pow(Math.abs(u) * 2, 2.4)
-    pts.push(new THREE.Vector3(x, y, z))
+  const pos: number[] = []
+  const px = 0.034
+  const gap = 0.012
+  const quad = (y: number, z: number) => {
+    const x = faceX(y, z, front) + (front ? 0.006 : -0.006)
+    const h = px / 2
+    const a = [x, y - h, z - h]
+    const b = [x, y - h, z + h]
+    const c = [x, y + h, z + h]
+    const d = [x, y + h, z - h]
+    pos.push(...a, ...b, ...c, ...a, ...c, ...d)
   }
-  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 64, 0.011, 6, false)
+  const cluster = (y0: number, rows: number, z0: number, cols: number, dir: number) => {
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) quad(y0 + r * (px + gap), dir * (z0 + c * (px + gap)))
+  }
+  for (const dir of [-1, 1]) {
+    if (front) cluster(0.82, 3, 0.52, 7, dir)
+    else {
+      cluster(1.0, 3, 0.5, 7, dir)
+      for (let z = -0.44; z <= 0.44 + 1e-6; z += px + gap) if (dir === 1) quad(1.023, z)
+    }
+  }
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+  return g
 }
 
 function ambientStrip() {
@@ -690,8 +782,8 @@ function Body({ live, reduced }: { live: LiveRef; reduced: boolean }) {
       front: mk(THREE.FrontSide, 0.07),
       strong: new THREE.LineBasicMaterial({ color: '#3CF2C8', transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
       faint: new THREE.LineBasicMaterial({ color: '#5AB8FF', transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
-      head: new THREE.MeshBasicMaterial({ color: '#E6F7FF', toneMapped: false, transparent: true }),
-      tail: new THREE.MeshBasicMaterial({ color: '#FF3B4F', toneMapped: false, transparent: true }),
+      head: new THREE.MeshBasicMaterial({ color: '#E6F7FF', toneMapped: false, transparent: true, side: THREE.DoubleSide }),
+      tail: new THREE.MeshBasicMaterial({ color: '#FF3B4F', toneMapped: false, transparent: true, side: THREE.DoubleSide }),
     }
   }, [])
 

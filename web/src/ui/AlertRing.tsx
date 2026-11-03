@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { kssColor, LEVEL } from './format'
+import { kssColor, kssColorDay, LEVEL } from './format'
 import type { RiskLevel } from '../engine/types'
 
 interface Props {
@@ -10,6 +10,8 @@ interface Props {
   confidence?: number
   calm?: boolean // reduce motion while driving
   label?: string
+  /** Day theme: light-surface palette (night keeps the original neon look). */
+  day?: boolean
 }
 
 const START = 135
@@ -23,25 +25,29 @@ function arc(cx: number, cy: number, r: number, a0: number, a1: number) {
 }
 
 /** Alertness gauge on the KSS 1–9 scale. Arc fills toward red as sleepiness rises. */
-export function AlertRing({ kss, level, size, confidence = 0.6, calm, label }: Props) {
+export function AlertRing({ kss, level, size, confidence = 0.6, calm, label, day }: Props) {
   const id = useId().replace(/:/g, '')
   const c = size / 2
   const r = size * 0.42
   const w = size * 0.055
   const frac = (Math.min(9, Math.max(1, kss)) - 1) / 8
   const len = (Math.PI * 2 * r * SWEEP) / 360
-  const col = kssColor(kss)
+  const col = day ? kssColorDay(kss) : kssColor(kss)
+  const ink = day
+    ? { track: 'rgba(19,20,23,0.07)', halo: 'rgba(19,20,23,0.08)', tick: 'rgba(19,20,23,0.22)', tickText: 'rgba(19,20,23,0.38)', knob: '#ffffff', label: '#686A72', line: '#44464E', strong: '#131417', faint: '#A4A8AE', warn: '#EA640C' }
+    : { track: 'rgba(255,255,255,0.07)', halo: 'rgba(255,255,255,0.08)', tick: 'rgba(255,255,255,0.28)', tickText: 'rgba(255,255,255,0.35)', knob: '#05070b', label: 'rgba(255,255,255,0.5)', line: 'rgba(255,255,255,0.72)', strong: '#fff', faint: 'rgba(255,255,255,0.4)', warn: '#FF9A3C' }
+  const ramp = day ? ['#00A389', '#5A9E10', '#D18F00', '#EA640C', '#E8320F'] : ['#3CF2C8', '#9BE15D', '#FFD04A', '#FF9A3C', '#FF3B4F']
   const info = LEVEL[level]
   const ticks = [3, 5, 6, 7, 8]
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
       <defs>
         <linearGradient id={`g${id}`} x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0" stopColor="#3CF2C8" />
-          <stop offset="0.5" stopColor="#9BE15D" />
-          <stop offset="0.68" stopColor="#FFD04A" />
-          <stop offset="0.82" stopColor="#FF9A3C" />
-          <stop offset="1" stopColor="#FF3B4F" />
+          <stop offset="0" stopColor={ramp[0]} />
+          <stop offset="0.5" stopColor={ramp[1]} />
+          <stop offset="0.68" stopColor={ramp[2]} />
+          <stop offset="0.82" stopColor={ramp[3]} />
+          <stop offset="1" stopColor={ramp[4]} />
         </linearGradient>
         <filter id={`f${id}`} x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation={size * 0.02} />
@@ -53,11 +59,11 @@ export function AlertRing({ kss, level, size, confidence = 0.6, calm, label }: P
         </radialGradient>
       </defs>
       <circle cx={c} cy={c} r={r * 0.92} fill={`url(#rg${id})`} style={{ transition: 'fill 1s' }} />
-      <path d={arc(c, c, r, START, START + SWEEP)} stroke="rgba(255,255,255,0.07)" strokeWidth={w} fill="none" strokeLinecap="round" />
+      <path d={arc(c, c, r, START, START + SWEEP)} stroke={ink.track} strokeWidth={w} fill="none" strokeLinecap="round" />
       {/* confidence halo */}
       <path
         d={arc(c, c, r + w * 1.1, START, START + SWEEP)}
-        stroke="rgba(255,255,255,0.08)"
+        stroke={ink.halo}
         strokeWidth={w * 0.12}
         fill="none"
         strokeDasharray={`${len * confidence} ${len}`}
@@ -69,7 +75,7 @@ export function AlertRing({ kss, level, size, confidence = 0.6, calm, label }: P
         fill="none"
         strokeLinecap="round"
         filter={`url(#f${id})`}
-        opacity={0.55}
+        opacity={day ? 0.22 : 0.55}
         strokeDasharray={`${len * frac} ${len}`}
         style={{ transition: calm ? 'stroke-dasharray 1.2s ease' : 'stroke-dasharray 0.6s ease' }}
       />
@@ -93,13 +99,13 @@ export function AlertRing({ kss, level, size, confidence = 0.6, calm, label }: P
               y1={c + r0 * Math.sin(a)}
               x2={c + r1 * Math.cos(a)}
               y2={c + r1 * Math.sin(a)}
-              stroke={k === 7 ? '#FF9A3C' : 'rgba(255,255,255,0.28)'}
+              stroke={k === 7 ? ink.warn : ink.tick}
               strokeWidth={k === 7 ? 3 : 2}
             />
             <text
               x={c + (r1 - size * 0.035) * Math.cos(a)}
               y={c + (r1 - size * 0.035) * Math.sin(a)}
-              fill={k === 7 ? '#FF9A3C' : 'rgba(255,255,255,0.35)'}
+              fill={k === 7 ? ink.warn : ink.tickText}
               fontSize={size * 0.032}
               textAnchor="middle"
               dominantBaseline="middle"
@@ -119,22 +125,22 @@ export function AlertRing({ kss, level, size, confidence = 0.6, calm, label }: P
             cx={c + r * Math.cos(a)}
             cy={c + r * Math.sin(a)}
             r={w * 0.62}
-            fill="#05070b"
+            fill={ink.knob}
             stroke={col}
             strokeWidth={w * 0.28}
             style={{ transition: 'cx 0.6s, cy 0.6s' }}
           />
         )
       })()}
-      <text x={c} y={c - size * 0.1} textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize={size * 0.04} fontFamily="var(--pleos)" fontWeight={600}>
+      <text x={c} y={c - size * 0.1} textAnchor="middle" fill={ink.label} fontSize={size * 0.04} fontFamily="var(--pleos)" fontWeight={600}>
         {label ?? '각성 상태'}
       </text>
       <text x={c} y={c + size * 0.035} textAnchor="middle" fill={col} fontSize={size * 0.135} fontFamily="var(--pleos)" fontWeight={800} style={{ transition: 'fill 0.8s' }}>
         {info.name}
       </text>
-      <text x={c} y={c + size * 0.13} textAnchor="middle" fill="rgba(255,255,255,0.72)" fontSize={size * 0.045} fontFamily="var(--pleos)" fontWeight={600}>
-        졸음지수 <tspan fontWeight={800} fill="#fff">{kss.toFixed(1)}</tspan>
-        <tspan fill="rgba(255,255,255,0.4)"> / 9</tspan>
+      <text x={c} y={c + size * 0.13} textAnchor="middle" fill={ink.line} fontSize={size * 0.045} fontFamily="var(--pleos)" fontWeight={600}>
+        졸음지수 <tspan fontWeight={800} fill={ink.strong}>{kss.toFixed(1)}</tspan>
+        <tspan fill={ink.faint}> / 9</tspan>
       </text>
     </svg>
   )
