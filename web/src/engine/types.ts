@@ -35,9 +35,13 @@ export interface VehicleSignals {
   position?: LngLat
   headingDeg?: number
   routeProgressKm?: number
+  /** false = off the bundled corridor route: progress is distance driven and stops come from the heading cone. */
+  onRoute?: boolean
   routeRemainingKm?: number
   routeEtaMin?: number
   roadClass?: 'highway' | 'urban' | 'rural'
+  /** Vehicle UI night mode (Configuration.uiMode), sent by the APK host. */
+  uiNight?: boolean
   outsidePm25?: number // µg/m³ (from public air quality data along the route)
 }
 

@@ -8,6 +8,7 @@
 
 import type { Capabilities, VehicleBus } from './bus'
 import type { RestStop, VehicleAction, VehicleSignals } from './types'
+import { ROUTE, bearing, distKm, pointAtKm, projectOnRoute } from './route'
 
 interface NativeApi {
   act(json: string): boolean
@@ -51,6 +52,11 @@ export class NativeVehicle implements VehicleBus {
     occupants: 1,
   }
   private caps: Capabilities
+  private odoKm = 0
+  private routeKm = 0
+  private lastReadAt = 0
+  private lastFix: [number, number] | null = null
+  private courseDeg: number | undefined
 
   constructor() {
     const api = window.KkaeumNative!
@@ -95,7 +101,34 @@ export class NativeVehicle implements VehicleBus {
   }
 
   read(): VehicleSignals {
-    return { ...this.sig, t: Date.now() }
+    const now = Date.now()
+    const s: VehicleSignals = { ...this.sig, t: now }
+    // Distance driven, integrated from speed (the Odometer trip API is not available on every build).
+    if (this.lastReadAt) this.odoKm += (Math.max(0, s.speedKph) * Math.min(5000, now - this.lastReadAt)) / 3.6e6
+    this.lastReadAt = now
+    // Corridor tracking: on the bundled route (heading the same way) progress is the projected route km;
+    // anywhere else it is distance driven, and the runtime picks stops from the heading cone instead.
+    // Course over ground from successive fixes: provider bearing is often 0/absent (emulator, tunnels).
+    if (s.position) {
+      if (!this.lastFix) this.lastFix = s.position
+      else if (distKm(this.lastFix, s.position) > 0.03) {
+        this.courseDeg = bearing(this.lastFix, s.position)
+        this.lastFix = s.position
+      }
+      if (this.courseDeg !== undefined) s.headingDeg = this.courseDeg
+    }
+    let onRoute = false
+    if (s.position) {
+      const pr = projectOnRoute(ROUTE, s.position)
+      const routeHeading = pointAtKm(ROUTE, pr.km).heading
+      const moving = s.speedKph > 5 && s.headingDeg !== undefined
+      const aligned = !moving || Math.abs(((routeHeading - (s.headingDeg ?? 0) + 540) % 360) - 180) < 75
+      onRoute = pr.offKm < 2.5 && aligned
+      if (onRoute) this.routeKm = pr.km
+    }
+    s.onRoute = onRoute
+    s.routeProgressKm = onRoute ? this.routeKm : this.odoKm
+    return s
   }
 
   async apply(action: VehicleAction) {

@@ -44,6 +44,7 @@ class VehicleGateway(context: Context, private val isParked: () -> Boolean) {
 
     // Capability cache (written on SDK callback threads, read on the JS bridge thread).
     @Volatile private var recircAreas: List<SeatArea> = emptyList()
+    @Volatile private var powerAreas: List<SeatArea> = emptyList()
     @Volatile private var tempBounds: Map<SeatArea, AreaBounds<Float>> = emptyMap()
     @Volatile private var tempStepC = 0.5f
     @Volatile private var fanBounds: Map<SeatArea, AreaBounds<Int>> = emptyMap()
@@ -89,9 +90,15 @@ class VehicleGateway(context: Context, private val isParked: () -> Boolean) {
     // ---- capabilities -------------------------------------------------------------------------------------
 
     /** Number of [Barrier.arrive] calls [probe] will make. */
-    val probeCount = 10
+    val probeCount = 11
 
     fun probe(barrier: Barrier) {
+        check("HVAC.checkHvacPowerCapabilities", barrier) { done, fail ->
+            hvac.checkHvacPowerCapabilities({ cfg: CapabilityConfig, areas: List<SeatArea> ->
+                if (cfg.writable) powerAreas = areas
+                done(cfg.summary(areas.map { it.label() }))
+            }, fail)
+        }
         check("HVAC.checkHvacRecirculationCapabilities", barrier) { done, fail ->
             hvac.checkHvacRecirculationCapabilities({ cfg: CapabilityConfig, areas: List<SeatArea> ->
                 if (cfg.writable) recircAreas = areas
@@ -252,15 +259,14 @@ class VehicleGateway(context: Context, private val isParked: () -> Boolean) {
     }
 
     /**
-     * Fan speed is NOT_AVAILABLE while the climate system is off (emulator 2.1.0: PropertyAsyncError code 2),
-     * so switch HVAC power on first when needed. Any failure falls through to the original call.
+     * Fan speed is NOT_AVAILABLE while the climate system is off (emulator 2.1.0: PropertyAsyncError code 2).
+     * getHvacPowerState is not trustworthy there (reported on while the VHAL was off), so request power on,
+     * which is idempotent, on the capability-reported power area and continue whatever the outcome.
      */
-    private fun withHvacPower(area: SeatArea, then: () -> Unit) {
-        hvac.getHvacPowerState(area, { on: Boolean? ->
-            if (on == true) return@getHvacPowerState then()
-            val call = "HVAC.setHvacPower(${area.label()}, true)"
-            hvac.setHvacPower(area, true, { _: SeatArea?, _: Boolean? -> SdkTrace.ok(call); then() }, { e -> SdkTrace.fail(call, e); then() })
-        }, { _ -> then() })
+    private fun withHvacPower(fallback: SeatArea, then: () -> Unit) {
+        val area = powerAreas.pickDriver() ?: fallback
+        val call = "HVAC.setHvacPower(${area.label()}, true)"
+        hvac.setHvacPower(area, true, { _: SeatArea?, _: Boolean? -> SdkTrace.ok(call); main.postDelayed(then, 250) }, { e -> SdkTrace.fail(call, e); then() })
     }
 
     private fun setSeatVentilation(level: Int): Boolean {

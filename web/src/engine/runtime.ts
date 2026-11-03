@@ -6,6 +6,7 @@ import type { Capabilities, VehicleBus } from './bus'
 import { FatigueModel, kssFromReaction } from './fatigue'
 import { Orchestrator, type Mode } from './orchestrator'
 import { planRest } from './planner'
+import { stopsAhead } from './route'
 import type {
   DriverProfile,
   FatigueEstimate,
@@ -64,6 +65,8 @@ const SUB_MS = 10_000
 export class Runtime {
   bus: VehicleBus
   stops: RestStop[]
+  /** All public rest stops; used when the vehicle is off the corridor route (sig.onRoute === false). */
+  freeRoamStops: Omit<RestStop, 'km'>[] = []
   fatigue: FatigueModel
   orch = new Orchestrator()
   co2: number
@@ -139,7 +142,7 @@ export class Runtime {
       this.lastPlanAt = sig.t
       const curve = this.fatigue.forecastCurve(sig, this.est.kss, 240, 5)
       this.plan = planRest({
-        stops: this.stops,
+        stops: this.stopsFor(sig),
         progressKm: sig.routeProgressKm ?? 0,
         avgSpeedKph: 95,
         curve,
@@ -182,6 +185,12 @@ export class Runtime {
       })
       if (this.history.length > 1200) this.history.shift()
     }
+  }
+
+  private stopsFor(sig: VehicleSignals): RestStop[] {
+    if (sig.onRoute !== false || !sig.position || !this.freeRoamStops.length) return this.stops
+    const heading = sig.speedKph > 5 ? sig.headingDeg : undefined
+    return stopsAhead(this.freeRoamStops, sig.position, heading, sig.routeProgressKm ?? 0)
   }
 
   execute(ev: TimelineEvent) {

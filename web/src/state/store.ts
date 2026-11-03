@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { Runtime, type Snapshot } from '../engine/runtime'
 import { SCENARIOS, SimVehicle, scenarioStart, type ScenarioConfig } from '../engine/sim'
 import { ROUTE } from '../engine/route'
-import { REST_STOPS } from '../data/stops'
+import { ALL_STOPS, REST_STOPS } from '../data/stops'
 import { voice } from '../voice/voice'
 import { NativeVehicle, isNative, setGleoHandler } from '../engine/native'
 
@@ -13,6 +13,9 @@ interface SimStore {
   playing: boolean
   timeScale: number
   autoPilot: boolean
+  /** In-car UI theme outside the APK (in the APK the vehicle's day/night mode wins). auto = sim clock. */
+  carTheme: 'auto' | 'day' | 'night'
+  setCarTheme: (t: 'auto' | 'day' | 'night') => void
   load: (id: string) => void
   setPlaying: (p: boolean) => void
   setTimeScale: (s: number) => void
@@ -37,13 +40,15 @@ export const useSim = create<SimStore>((set, get) => ({
     if (isNative()) {
       const bus = new NativeVehicle()
       rt = new Runtime(bus, { name: '운전자', wakeTime: Date.now() - 9 * 3.6e6, sleepHours: 6.5, chronotype: 0 }, REST_STOPS)
+      rt.freeRoamStops = ALL_STOPS
     } else {
       const { start, wake } = scenarioStart(sc)
       const sim = new SimVehicle(sc, start, ROUTE)
       rt = new Runtime(sim, { name: '운전자', wakeTime: wake, sleepHours: sc.sleepHours, chronotype: 0 }, REST_STOPS)
       rt.fleetMode = Boolean(sc.fleet)
     }
-    rt.autoPilot = get().autoPilot
+    // In the car the real driver answers proposals and starts naps; auto-pilot is a simulation aid only.
+    rt.autoPilot = isNative() ? false : get().autoPilot
     rt.hooks = {
       speak: (key) => voice.say(key),
       engage: () => voice.engage(rt),
@@ -95,9 +100,14 @@ export const useSim = create<SimStore>((set, get) => ({
   },
   setPlaying: (playing) => set({ playing }),
   setTimeScale: (timeScale) => set({ timeScale }),
+  carTheme: 'auto',
+  setCarTheme: (carTheme) => set({ carTheme }),
   setAutoPilot: (autoPilot) => {
     const rt = get().runtime
     if (rt) rt.autoPilot = autoPilot
     set({ autoPilot })
   },
 }))
+
+// Read-only handle for on-device inspection (tools/emu/wv.cjs over WebView devtools in debug builds).
+;(globalThis as { __kkaeumStore?: typeof useSim }).__kkaeumStore = useSim

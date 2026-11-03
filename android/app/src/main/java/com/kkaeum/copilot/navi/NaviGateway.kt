@@ -5,7 +5,9 @@ import ai.pleos.playground.navi.constants.WaypointIndex
 import ai.pleos.playground.navi.data.CurrentLocationInfo
 import ai.pleos.playground.navi.data.DestinationInfo
 import ai.pleos.playground.navi.data.RequestWaypointInfo
+import ai.pleos.playground.navi.data.RouteInfo
 import ai.pleos.playground.navi.data.RouteStateInfo
+import ai.pleos.playground.navi.constants.RouteOption
 import ai.pleos.playground.navi.data.WaypointChangedInfo
 import ai.pleos.playground.navi.helper.NaviHelper
 import ai.pleos.playground.navi.helper.listener.NaviHelperEventListener
@@ -34,6 +36,9 @@ class NaviGateway(
     /** When FusedLocation is unavailable, navi's current-location events feed position/heading instead. */
     @Volatile var useAsLocationSource = false
 
+    /** Whether route guidance is active (from RouteStateInfo / route events). A waypoint needs a route. */
+    @Volatile private var routing = false
+
     private val listener = object : NaviHelperEventListener {
         override fun onDestinationInfo(info: DestinationInfo) {
             // UNCERTAIN units (undocumented): remainDistance assumed metres, remainTime assumed seconds.
@@ -41,12 +46,13 @@ class NaviGateway(
         }
 
         override fun onRouteStateInfo(info: RouteStateInfo) {
+            routing = info.isRouting
             if (!info.isRouting) onRoute(null, null)
         }
 
-        override fun onRouteCancelled() = onRoute(null, null)
-        override fun onRoutingCompleted() = onRoute(null, null)
-        override fun onRouteStarted(info: ai.pleos.playground.navi.data.RouteStartInfo) = refresh()
+        override fun onRouteCancelled() { routing = false; onRoute(null, null) }
+        override fun onRoutingCompleted() { routing = false; onRoute(null, null) }
+        override fun onRouteStarted(info: ai.pleos.playground.navi.data.RouteStartInfo) { routing = true; refresh() }
         override fun onDestinationChanged() = refresh()
 
         override fun onWaypointChanged(info: WaypointChangedInfo) {
@@ -108,12 +114,31 @@ class NaviGateway(
             SdkTrace.skip(call, "NaviHelper not connected")
             return false
         }
+        if (!routing) return requestRouteTo(lat, lon, name, poiId, address)
         return try {
             helper.addWaypoint(
                 // (latitude, longitude, poiName, waypointIndex, poiId, address, poiSubId, poiProvider)
                 RequestWaypointInfo(lat, lon, name, WaypointIndex.FIRST, poiId, address, "0", ""),
             )
             SdkTrace.ok(call, "requested")
+            true
+        } catch (t: Throwable) {
+            SdkTrace.fail(call, t)
+            false
+        }
+    }
+
+    /**
+     * No active guidance (driving without a destination): a waypoint cannot be inserted, so the rest stop
+     * becomes the destination instead. Verified on Pleos Connect emulator 2.1.0, where addWaypoint without
+     * a route only opened the navigation home screen.
+     */
+    private fun requestRouteTo(lat: Double, lon: Double, name: String, poiId: String, address: String): Boolean {
+        val call = "NaviHelper.requestRoute(RouteInfo(lat=%.5f, lon=%.5f, \"%s\", RECOMMENDED))".format(lat, lon, name)
+        return try {
+            // (latitude, longitude, displayLat, displayLon, poiName, poiId, address, poiSubId, routeOption, poiProvider, isMobileRequest)
+            helper.requestRoute(RouteInfo(lat, lon, null, null, name, poiId, address, "0", RouteOption.RECOMMENDED, "", false))
+            SdkTrace.ok(call, "requested (no active route → destination)")
             true
         } catch (t: Throwable) {
             SdkTrace.fail(call, t)

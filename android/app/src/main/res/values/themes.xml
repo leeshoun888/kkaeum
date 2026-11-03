@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="kkaeum_bg">#05070B</color>
-    <color name="kkaeum_teal">#3CF2C8</color>
+    <!-- Pleos background_primary (basic_50): light #F7F8FA; the night palette lives in values-night. -->
+    <color name="kkaeum_bg">#F7F8FA</color>
+    <color name="kkaeum_teal">#00A389</color>
 
-    <style name="Theme.Kkaeum" parent="android:Theme.DeviceDefault.NoActionBar">
+    <style name="Theme.Kkaeum" parent="android:Theme.DeviceDefault.Light.NoActionBar">
         <item name="android:windowBackground">@color/kkaeum_bg</item>
         <item name="android:colorBackground">@color/kkaeum_bg</item>
         <item name="android:colorAccent">@color/kkaeum_teal</item>

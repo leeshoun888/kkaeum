@@ -101,8 +101,8 @@ dependencies {
 
 // ---- web UI → assets/web -----------------------------------------------------------------------
 
-val copyWebDist by tasks.registering(Copy::class) {
-    description = "Copies ../web/dist (Vite build) into src/main/assets/web."
+val copyWebDist by tasks.registering(Sync::class) {
+    description = "Mirrors ../web/dist (Vite build) into src/main/assets/web, removing stale hashed bundles."
     group = "kkaeum"
     from(webDist)
     into(webAssets)

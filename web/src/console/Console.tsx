@@ -17,7 +17,7 @@ import './console.css'
 const CabinTwin = lazy(() => import('./CabinTwin').then((m) => ({ default: m.CabinTwin })))
 
 export function Console() {
-  const { load, scenario, playing, setPlaying, timeScale, setTimeScale, autoPilot, setAutoPilot, runtime } = useSim()
+  const { load, scenario, playing, setPlaying, timeScale, setTimeScale, autoPilot, setAutoPilot, runtime, carTheme, setCarTheme } = useSim()
   const voiceOn = useVoice((s) => s.enabled)
   const t = useSim((s) => s.snap?.sig.t)
   useEffect(() => {
@@ -61,6 +61,19 @@ export function Console() {
             ))}
           </div>
           <span className="simclock mono">{t ? clock(t) : '--:--'}</span>
+          <div className="seg" title="차량 화면 테마 (Pleos 주간/야간 모드)">
+            {(
+              [
+                ['auto', '자동'],
+                ['day', '주간'],
+                ['night', '야간'],
+              ] as const
+            ).map(([k, l]) => (
+              <button key={k} className={carTheme === k ? 'on' : ''} onClick={() => setCarTheme(k)}>
+                {l}
+              </button>
+            ))}
+          </div>
           <button className={`btn ${autoPilot ? 'on' : ''}`} onClick={() => setAutoPilot(!autoPilot)} title="시뮬레이션 운전자가 제안에 자동 응답">
             오토 드라이버
           </button>

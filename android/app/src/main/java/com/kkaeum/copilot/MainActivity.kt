@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
+import android.content.res.Configuration
 import android.os.Bundle
 import android.webkit.ConsoleMessage
 import android.webkit.PermissionRequest
@@ -89,6 +90,7 @@ class MainActivity : ComponentActivity() {
         val barrier = Barrier(vehicle.probeCount + voice.probeCount + 1, CAPS_TIMEOUT_MS) {
             loadUi()
             collector.start()
+            pushUiMode(resources.configuration)
         }
         vehicle.probe(barrier)
         voice.start(barrier)
@@ -198,6 +200,17 @@ class MainActivity : ComponentActivity() {
         val fusedOk = ContextCompat.checkSelfPermission(this, PERMISSION_FUSED_LOCATION) == PackageManager.PERMISSION_GRANTED &&
             location.start()
         navi.useAsLocationSource = !fusedOk
+    }
+
+    /** uiMode is in android:configChanges, so day/night switches arrive here without recreating the WebView. */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (::collector.isInitialized) pushUiMode(newConfig)
+    }
+
+    /** The web UI follows the vehicle's day/night theme (Pleos light / dark system palettes). */
+    private fun pushUiMode(config: Configuration) {
+        collector.put("uiNight", (config.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES)
     }
 
     private fun onLocation(lat: Double, lon: Double, heading: Double) {
