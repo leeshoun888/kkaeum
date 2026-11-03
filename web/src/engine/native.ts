@@ -6,7 +6,7 @@
 //   speak(key, text) → TextToSpeech SDK ;  listen() → SpeechToText SDK
 //   capabilities() → JSON from checkXXXCapabilities() results
 
-import type { Capabilities, VehicleBus } from './bus'
+import type { BusEvent, Capabilities, VehicleBus } from './bus'
 import type { RestStop, VehicleAction, VehicleSignals } from './types'
 import { ROUTE, bearing, distKm, pointAtKm, projectOnRoute } from './route'
 
@@ -17,6 +17,9 @@ interface NativeApi {
   speak(key: string, text: string): void
   listen(requestId: string): void
   log(msg: string): void
+  removeWaypoint?(): boolean
+  tripTo?(json: string): boolean
+  showChargers?(): boolean
 }
 
 declare global {
@@ -27,6 +30,7 @@ declare global {
       onSpeech: (requestId: string, event: string, payload: string) => void
       onSdkTrace: (line: string) => void
       onGleo?: (json: string) => { status: string; message: string; data?: unknown }
+      onEvent?: (type: string, json: string) => void
     }
   }
 }
@@ -52,11 +56,14 @@ export class NativeVehicle implements VehicleBus {
     occupants: 1,
   }
   private caps: Capabilities
+  private eventListeners = new Set<(e: BusEvent) => void>()
   private odoKm = 0
   private routeKm = 0
   private lastReadAt = 0
   private lastFix: [number, number] | null = null
   private courseDeg: number | undefined
+  private tbtValue: number | undefined
+  private tbtChangedAt = 0
 
   constructor() {
     const api = window.KkaeumNative!
@@ -93,6 +100,16 @@ export class NativeVehicle implements VehicleBus {
       onSpeech: (id, ev, payload) => speechListeners.forEach((l) => l(id, ev, payload)),
       onSdkTrace: (line) => traceListeners.forEach((l) => l(line)),
       onGleo: (json) => gleoHandler(json),
+      onEvent: (type, json) => {
+        let payload: Record<string, unknown> = {}
+        try {
+          payload = JSON.parse(json)
+        } catch {
+          /* malformed event */
+        }
+        const ev = { type, ...payload } as BusEvent
+        this.eventListeners.forEach((l) => l(ev))
+      },
     }
   }
 
@@ -128,16 +145,40 @@ export class NativeVehicle implements VehicleBus {
     }
     s.onRoute = onRoute
     s.routeProgressKm = onRoute ? this.routeKm : this.odoKm
+    // A TBT distance that stops changing is stale (navi not guiding / not tracking): ignore it after 60 s
+    // so the "hold voice before a manoeuvre" rule can never hold forever.
+    if (s.tbtNextM !== this.tbtValue) {
+      this.tbtValue = s.tbtNextM
+      this.tbtChangedAt = now
+    }
+    if (s.tbtNextM !== undefined && (now - this.tbtChangedAt > 60_000 || s.navStatus !== 'ROUTE_DRIVE' || s.speedKph < 5)) {
+      s.tbtNextM = undefined
+      s.tbtNext = undefined
+    }
     return s
   }
 
   async apply(action: VehicleAction) {
     if (action.kind === 'speak') return true
+    if (action.kind === 'showChargers') return window.KkaeumNative!.showChargers?.() ?? false
     return window.KkaeumNative!.act(JSON.stringify(action))
   }
 
   async addWaypoint(stop: RestStop) {
     return window.KkaeumNative!.addWaypoint(JSON.stringify(stop))
+  }
+
+  async removeWaypoint() {
+    return window.KkaeumNative!.removeWaypoint?.() ?? false
+  }
+
+  tripTo(stop: RestStop) {
+    window.KkaeumNative!.tripTo?.(JSON.stringify({ id: stop.id, name: stop.name, lngLat: stop.lngLat }))
+  }
+
+  onEvent(fn: (e: BusEvent) => void) {
+    this.eventListeners.add(fn)
+    return () => void this.eventListeners.delete(fn)
   }
 }
 

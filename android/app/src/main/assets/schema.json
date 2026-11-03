@@ -27,7 +27,10 @@
           "properties": {
             "kind": {
               "type": "string",
-              "enum": ["REST_AREA", "DROWSY_SHELTER"],
+              "enum": [
+                "REST_AREA",
+                "DROWSY_SHELTER"
+              ],
               "description": "Preferred type of stop."
             }
           },
@@ -49,6 +52,19 @@
               "description": "Nap length in minutes."
             }
           },
+          "required": []
+        },
+        "component": "service"
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "CANCEL_REST_STOP",
+        "description": "Removes the rest stop KKAEUM previously added as a navigation waypoint, when the driver no longer needs the break.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
           "required": []
         },
         "component": "service"

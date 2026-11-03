@@ -13,6 +13,7 @@ import { SCENARIOS, SimVehicle, type ScenarioConfig } from '../engine/sim'
 import { ROUTE } from '../engine/route'
 import type { RestStop, RiskLevel, TimelineEvent } from '../engine/types'
 import { REST_STOPS } from '../data/stops'
+import { normalise, periodicPayload, WebhookVehicle, type FleetSample, type FleetUpdate } from '../fleet/pleosFleet'
 import { LEVEL, clock, dur, kssColor } from '../ui/format'
 import { IcAlert, IcCheck, IcPause, IcPlay, IcCar, Logo } from '../ui/icons'
 import './fleet.css'
@@ -91,6 +92,11 @@ class FleetSim {
   private feedSeq = 0
   /** Day totals · survive vehicle re-dispatch. */
   totals = { trips: 0, violatedTrips: 0, rests: 0, accepted: 0, declined: 0, prevented: 0, dispatches: 0 }
+  /** Pleos Fleet API Webhook "Periodic Data" bodies (10S_30S), as a real fleet would deliver them. */
+  onPayload?: (payload: ReturnType<typeof periodicPayload>) => void
+  payloads = 0
+  private samples = new Map<string, FleetSample[]>()
+  private lastSampleAt = new Map<string, number>()
 
   constructor(seed = 20261103) {
     this.rnd = mulberry32(seed)
@@ -218,12 +224,28 @@ class FleetSim {
         continue
       }
       tr.rt.frame(realDtMs, scale)
+      this.sample(tr)
       // The simulated driver answers a voice proposal ~90 s (sim time) after it is made, at any time scale.
       const pr = tr.rt.proposal
       if (pr && tr.sim.t - pr.createdAt >= 90_000) tr.rt.acceptProposal()
       this.observe(tr)
       this.collect(tr)
     }
+  }
+
+  /** Every 10 s of vehicle time take a sample; every third one ships as a webhook payload. */
+  private sample(tr: Truck) {
+    const t = tr.sim.t
+    if (t - (this.lastSampleAt.get(tr.id) ?? 0) < 10_000) return
+    this.lastSampleAt.set(tr.id, t)
+    const sig = tr.sim.read()
+    const buf = this.samples.get(tr.id) ?? []
+    buf.push({ t, speedKph: sig.speedKph, lat: sig.position?.[1] ?? 0, lon: sig.position?.[0] ?? 0, odometerKm: 41_200 + tr.sim.km, socPct: sig.socPct, dteKm: sig.rangeKm })
+    if (buf.length >= 3) {
+      this.payloads++
+      this.onPayload?.(periodicPayload(`kkaeum-sim-${tr.id}`, `KMHKKAEUM${tr.plate.replace(/\D/g, '').padStart(8, '0')}`, buf))
+      this.samples.set(tr.id, [])
+    } else this.samples.set(tr.id, buf)
   }
 
   /** Regulation bookkeeping from the engine's own time-on-task counter. */
@@ -944,6 +966,147 @@ function AlertFeed({ feed, onSelect }: { feed: FeedItem[]; onSelect: (id: string
   )
 }
 
+// ─── Pleos Fleet API link ────────────────────────────────────────────────────
+
+interface LiveVehicle {
+  id: string
+  bus: WebhookVehicle
+  rt: Runtime
+  last: FleetUpdate
+}
+
+/**
+ * The fleet's data path, shown as it would run in production: every simulated vehicle ships Pleos Fleet
+ * API Webhook payloads (Periodic Data, 10S_30S). With the KKAEUM server running they go out to
+ * POST /api/fleet/webhook and come back over SSE (/api/fleet/stream) exactly as real fleet vehicles
+ * would; vehicles that are not ours each get a fatigue engine fed only by the webhook data.
+ */
+function FleetApiPanel({ fleet }: { fleet: FleetSim }) {
+  const [live, setLive] = useState(false)
+  const [last, setLast] = useState<string>('')
+  const [normal, setNormal] = useState<FleetUpdate | null>(null)
+  const [received, setReceived] = useState(0)
+  const [external, setExternal] = useState<LiveVehicle[]>([])
+  const ext = useRef(new Map<string, LiveVehicle>())
+  const liveRef = useRef(false)
+  const posting = useRef(0)
+
+  useEffect(() => {
+    let shown = 0
+    fleet.onPayload = (payload) => {
+      const now = performance.now()
+      if (now - shown > 900) {
+        shown = now
+        setLast(JSON.stringify(payload, null, 2))
+        setNormal(normalise(payload, 'periodic').at(-1) ?? null)
+      }
+      // End-to-end through the server's webhook receiver, a few per second at most.
+      if (liveRef.current && posting.current < 4) {
+        posting.current++
+        void fetch(`${import.meta.env.BASE_URL}api/fleet/webhook`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-API-Version': 'v1.0', 'X-42dot-transmissionType': '10S_30S' },
+          body: JSON.stringify(payload),
+        }).finally(() => posting.current--)
+      }
+    }
+    return () => {
+      fleet.onPayload = undefined
+    }
+  }, [fleet])
+
+  useEffect(() => {
+    if (typeof EventSource === 'undefined') return
+    const es = new EventSource(`${import.meta.env.BASE_URL}api/fleet/stream`)
+    es.onopen = () => {
+      liveRef.current = true
+      setLive(true)
+    }
+    es.onerror = () => {
+      liveRef.current = false
+      setLive(false)
+    }
+    es.onmessage = (m) => {
+      let u: FleetUpdate
+      try {
+        u = JSON.parse(m.data)
+      } catch {
+        return
+      }
+      setReceived((n) => n + 1)
+      if (!u.vehicleId || u.vehicleId.startsWith('kkaeum-sim-')) return
+      // A real fleet vehicle: its own fatigue engine on webhook data only.
+      let v = ext.current.get(u.vehicleId)
+      if (!v) {
+        const bus = new WebhookVehicle(u)
+        const rt = new Runtime(bus, { name: '운전자', wakeTime: u.t - 9 * 3.6e6, sleepHours: 6.5, chronotype: 0 }, REST_STOPS)
+        rt.autoPilot = false
+        v = { id: u.vehicleId, bus, rt, last: u }
+        ext.current.set(u.vehicleId, v)
+      } else v.bus.ingest(u)
+      v.last = u
+      v.rt.frame(0, 1)
+      setExternal([...ext.current.values()])
+    }
+    return () => es.close()
+  }, [])
+
+  return (
+    <section className="fl-api glass">
+      <div className="fl-api-h">
+        <div>
+          <div className="eyebrow">Pleos Fleet API 연동</div>
+          <h2>차량 데이터 파이프라인</h2>
+        </div>
+        <span className={`fl-api-src ${live ? 'live' : ''}`}>
+          <i />
+          {live ? '웹훅 수신기 연결됨 · /api/fleet/webhook → SSE' : '서버 없음 · 시뮬레이터가 웹훅 규격 페이로드를 직접 생성'}
+        </span>
+      </div>
+      <div className="fl-api-grid">
+        <div className="fl-api-stats">
+          <div><b>{fleet.payloads.toLocaleString()}</b><span>생성한 Periodic Data 페이로드</span></div>
+          <div><b>{received.toLocaleString()}</b><span>웹훅 수신기 경유 (SSE)</span></div>
+          <div><b>{external.length}</b><span>실차 (외부 vehicleId)</span></div>
+          <p>
+            규격: <code>POST</code> 콜백 · 헤더 <code>X-42dot-transmissionType: 10S_30S</code> · 응답 <code>200 {'{"status":"completed"}'}</code>
+            <br />
+            실차 연결: Pleos Fleet 계약 후 발급되는 <code>FLEET_API_HOST · CLIENT_ID · SECRET · PROJECT_ID</code>만 서버에 설정하면 동일 경로로 수신·조회됩니다.
+          </p>
+          {normal && (
+            <div className="fl-api-norm">
+              <span>정규화</span> {normal.vehicleId.replace('kkaeum-sim-', '')} · {normal.speedKph?.toFixed(0)}km/h · SOC {normal.socPct?.toFixed(0)}% ·{' '}
+              {normal.lat?.toFixed(3)}, {normal.lon?.toFixed(3)}
+            </div>
+          )}
+        </div>
+        <pre className="fl-api-json">{last || '페이로드 대기 중…'}</pre>
+      </div>
+      {external.length > 0 && (
+        <table className="fl-api-ext">
+          <thead>
+            <tr><th>vehicleId</th><th>속도</th><th>SOC</th><th>연속운전</th><th>KSS</th></tr>
+          </thead>
+          <tbody>
+            {external.map((v) => {
+              const snap = v.rt.snapshot()
+              return (
+                <tr key={v.id}>
+                  <td>{v.id.slice(0, 13)}</td>
+                  <td>{(v.last.speedKph ?? 0).toFixed(0)} km/h</td>
+                  <td>{v.last.socPct !== undefined ? `${v.last.socPct.toFixed(0)}%` : '-'}</td>
+                  <td>{Math.round(v.rt.fatigue.timeOnTaskMin)}분</td>
+                  <td style={{ color: kssColor(snap.est.kss) }}>{snap.est.kss.toFixed(1)}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      )}
+    </section>
+  )
+}
+
 // ─── CSV export ──────────────────────────────────────────────────────────────
 
 function exportCsv(fleet: FleetSim) {
@@ -1160,6 +1323,8 @@ export function Fleet() {
             <VehiclePanel tr={sel} />
             <AlertFeed feed={feed} onSelect={setSelected} />
           </div>
+
+          <FleetApiPanel fleet={fleet} />
 
           <footer className="fl-foot">
             각 차량은 독립된 깨움 엔진(3-프로세스 졸음 모델 · CO₂ 디지털 트윈 · 예측 휴식 플래너 · 개입 오케스트레이터)으로 시뮬레이션됩니다. 운전자 정보는 성만

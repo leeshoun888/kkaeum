@@ -9,6 +9,18 @@ import ai.pleos.playground.navi.data.RouteInfo
 import ai.pleos.playground.navi.data.RouteStateInfo
 import ai.pleos.playground.navi.constants.RouteOption
 import ai.pleos.playground.navi.data.WaypointChangedInfo
+import ai.pleos.playground.navi.constants.NavigationStatus
+import ai.pleos.playground.navi.data.CautionPoint
+import ai.pleos.playground.navi.data.ChargerOperator
+import ai.pleos.playground.navi.data.NavigationScreenRequest
+import ai.pleos.playground.navi.data.RecentDestinationInfo
+import ai.pleos.playground.navi.data.TBTInfo
+import ai.pleos.playground.navi.data.TripInfo
+import ai.pleos.playground.navi.data.TripRequest
+import ai.pleos.playground.navi.data.WaypointArrivedInfo
+import ai.pleos.playground.navi.data.WaypointInfo
+import org.json.JSONArray
+import org.json.JSONObject
 import ai.pleos.playground.navi.helper.NaviHelper
 import ai.pleos.playground.navi.helper.listener.NaviHelperEventListener
 import android.content.Context
@@ -26,6 +38,10 @@ class NaviGateway(
     context: Context,
     private val onRoute: (remainingKm: Double?, etaMin: Double?) -> Unit,
     private val onLocation: (lat: Double, lon: Double, heading: Double) -> Unit,
+    /** Continuous navi state for the fatigue engine (VehicleSignals keys). */
+    private val onSignal: (key: String, value: Any?) -> Unit = { _, _ -> },
+    /** One-off navi events for the web runtime (type, JSON payload). */
+    private val onEvent: (type: String, payload: JSONObject) -> Unit = { _, _ -> },
 ) {
     private val helper = NaviHelper(context)
     private val main = Handler(Looper.getMainLooper())
@@ -67,7 +83,60 @@ class NaviGateway(
         override fun onCurrentLocationInfo(info: CurrentLocationInfo) {
             if (useAsLocationSource) onLocation(info.latitude, info.longitude, info.heading)
         }
+
+        // Next manoeuvre: interventions that talk to the driver are held back right before a turn / exit.
+        override fun onTBTInfo(list: List<TBTInfo>) {
+            val next = list.firstOrNull()
+            onSignal("tbtNextM", next?.distance)
+            onSignal("tbtNext", next?.description?.takeIf { it.isNotBlank() })
+        }
+
+        // Accident-prone / fog / downhill / slippery stretches ahead raise the alerting sensitivity.
+        override fun onCautionPointInfo(list: List<CautionPoint>) {
+            val near = list.filter { it.type.name in RISK_POINTS && it.remainDistance in 0..3000 }.minByOrNull { it.remainDistance }
+            onSignal("cautionType", near?.type?.name)
+            onSignal("cautionM", near?.remainDistance)
+        }
+
+        override fun onWayPointInfo(list: List<WaypointInfo>) {
+            onEvent("waypoints", JSONObject().put("items", JSONArray(list.map {
+                JSONObject().put("name", it.name).put("poiId", it.poiId).put("lat", it.latitude).put("lon", it.longitude)
+                    .put("remainKm", it.remainDistance / 1000.0).put("remainMin", it.remainTime / 60.0)
+            })))
+        }
+
+        override fun onWayPointArrived(info: WaypointArrivedInfo) {
+            SdkTrace.ok("NaviHelperEventListener.onWayPointArrived", info.name)
+            onEvent("waypointArrived", JSONObject().put("name", info.name))
+        }
+
+        override fun onDestinationArrived(info: ai.pleos.playground.navi.data.DestinationArrivedInfo) {
+            onEvent("destinationArrived", JSONObject().put("name", info.name))
+        }
+
+        // Real ETA, distance and state of charge on arrival for the rest stop the planner picked.
+        override fun onTripInfo(info: TripInfo) {
+            SdkTrace.ok("NaviHelperEventListener.onTripInfo", "${info.distance}m ${info.eta}s soc=${info.estimatedSocAtDest}")
+            onEvent("tripInfo", JSONObject().put("poiId", lastTripPoi).put("distanceKm", info.distance / 1000.0)
+                .put("etaMin", info.eta / 60.0).put("socAtDest", info.estimatedSocAtDest))
+        }
+
+        override fun onRecentDestinationInfo(list: List<RecentDestinationInfo>) {
+            onEvent("recentDestinations", JSONObject().put("items", JSONArray(list.take(5).map {
+                JSONObject().put("name", it.name).put("lat", it.latitude).put("lon", it.longitude)
+            })))
+        }
+
+        override fun onChargerOperatorInfo(list: List<ChargerOperator>) {
+            onEvent("chargerOperators", JSONObject().put("items", JSONArray(list.map { it.name })))
+        }
+
+        override fun onNavigationStatus(status: NavigationStatus) {
+            onSignal("navStatus", status.name)
+        }
     }
+
+    @Volatile private var lastTripPoi = ""
 
     private val poll = object : Runnable {
         override fun run() {
@@ -83,6 +152,9 @@ class NaviGateway(
                 SdkTrace.ok("NaviHelper.initialize()", "connected")
                 helper.addListener(listener)
                 main.post(poll)
+                // Once per start: where the driver usually goes (trip length estimate) and the charger networks.
+                runCatching { helper.getRecentDestinationInfo() }.onFailure { SdkTrace.fail("NaviHelper.getRecentDestinationInfo()", it) }
+                runCatching { helper.getChargerOperatorInfo() }.onFailure { SdkTrace.fail("NaviHelper.getChargerOperatorInfo()", it) }
                 onReady(true)
             }, { t: Throwable ->
                 connected = false
@@ -100,6 +172,10 @@ class NaviGateway(
         runCatching {
             helper.getRouteStateInfo()
             helper.getDestinationInfo()
+            if (routing) {
+                helper.getTBTInfo()
+                helper.getWaypointInfo()
+            }
             if (useAsLocationSource) helper.getCurrentLocationInfo()
         }
     }
@@ -146,6 +222,32 @@ class NaviGateway(
         }
     }
 
+    /** Driver declined / cancelled the rest stop after it was added. */
+    fun removeWaypoint(): Boolean {
+        val call = "NaviHelper.removeWaypoint(FIRST)"
+        if (!connected || !routing) return SdkTrace.skip(call, "no active route").let { false }
+        return runCatching { helper.removeWaypoint(WaypointIndex.FIRST); SdkTrace.ok(call, "requested"); true }
+            .getOrElse { SdkTrace.fail(call, it); false }
+    }
+
+    /** Asks navi for the real ETA / distance / SoC on arrival to a candidate stop (answer: onTripInfo). */
+    fun tripTo(lat: Double, lon: Double, name: String, poiId: String): Boolean {
+        val call = "NaviHelper.requestTrip(TripRequest(%.5f, %.5f, \"%s\"))".format(lat, lon, name)
+        if (!connected) return SdkTrace.skip(call, "NaviHelper not connected").let { false }
+        lastTripPoi = poiId
+        // (latitude, longitude, poiId, poiName, poiSubId)
+        return runCatching { helper.requestTrip(TripRequest(lat, lon, poiId, name, "0")); SdkTrace.ok(call, "requested"); true }
+            .getOrElse { SdkTrace.fail(call, it); false }
+    }
+
+    /** Low battery: open navi's nearby-charging list so the rest can double as a charging stop. */
+    fun showNearbyChargers(): Boolean {
+        val call = "NaviHelper.requestNavigationScreen(NearbyChargingStations)"
+        if (!connected) return SdkTrace.skip(call, "NaviHelper not connected").let { false }
+        return runCatching { helper.requestNavigationScreen(NavigationScreenRequest.NearbyChargingStations); SdkTrace.ok(call); true }
+            .getOrElse { SdkTrace.fail(call, it); false }
+    }
+
     fun release() {
         main.removeCallbacks(poll)
         runCatching { helper.removeListener(listener) }
@@ -155,5 +257,9 @@ class NaviGateway(
 
     private companion object {
         const val POLL_MS = 10_000L
+        val RISK_POINTS = setOf(
+            "ACCIDENT_PRONE_AREA", "FOG_AREA", "DOWNHILL_CAUTION_AREA", "SLIPPERY_ROAD_ALERT",
+            "WILDLIFE_CROSSING", "FALLING_ROCK_AREA", "WRONG_WAY_DRIVING_ALERT", "HIGHWAY_CONSTRUCTION",
+        )
     }
 }

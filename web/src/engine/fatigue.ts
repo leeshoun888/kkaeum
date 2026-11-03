@@ -165,6 +165,9 @@ export class FatigueModel {
     const co2 = clamp((co2Ppm - 1000) / 1000, 0, 1.6) * 0.55
     const cabin = sig.cabinTempC ?? sig.setTempC
     const thermal = clamp((cabin - 23) * 0.18, 0, 0.9)
+    // Pleos listeners: driving in the dark (low beam on) and contact warmth (seat / wheel heating).
+    const darkness = sig.headlightsOn ? 0.15 : 0
+    const warmth = clamp(((sig.seatHeat ?? 0) + (sig.wheelHeat ?? 0)) * 0.08, 0, 0.3)
 
     let countermeasure = 0
     for (const x of this.transients) {
@@ -172,7 +175,7 @@ export class FatigueModel {
       countermeasure -= x.amount * Math.pow(0.5, age / x.halfLifeMin)
     }
 
-    let kss = base + postLunch + tot + mono + co2 + thermal + countermeasure
+    let kss = base + postLunch + tot + mono + co2 + thermal + darkness + warmth + countermeasure
 
     // Probe fusion: recent probes pull the estimate toward the measured value (weight decays over 25 min).
     let probeDelta = 0
@@ -194,7 +197,8 @@ export class FatigueModel {
     }
 
     let dawDelta = 0
-    if (sig.dawWarning) {
+    // The vehicle's own warnings (DAW telltale, DMS camera drowsiness) override the model upward.
+    if (sig.dawWarning || sig.dmsDrowsy) {
       dawDelta = Math.max(0, 7.4 - kss)
       kss += dawDelta
       confidence = Math.max(confidence, 0.9)
@@ -209,6 +213,8 @@ export class FatigueModel {
       { key: 'monotony', label: '도로 단조로움', value: mono },
       { key: 'co2', label: '실내 CO₂', value: co2 },
       { key: 'thermal', label: '실내 온열 부하', value: thermal },
+      { key: 'darkness', label: '야간 주행(전조등)', value: darkness },
+      { key: 'warmth', label: '시트·스티어링 열선', value: warmth },
       { key: 'probe', label: '음성 반응속도 측정', value: probeDelta },
       { key: 'daw', label: '차량 주의 경고', value: dawDelta },
       { key: 'countermeasure', label: '깨움 개입 효과', value: countermeasure },

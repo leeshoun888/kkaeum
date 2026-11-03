@@ -67,6 +67,11 @@ export const useSim = create<SimStore>((set, get) => ({
         const l = ['맑음', '주의', '졸음 신호', '휴식 필요', '위험'][s.est.level]
         return { status: 'success', message: `졸음지수 ${s.est.kss.toFixed(1)}, ${l} 상태예요.${s.plan ? ` 추천 휴식지는 ${s.plan.stop.name}, ${Math.round(s.plan.etaMin)}분 거리예요.` : ''}` }
       }
+      if (fn.includes('CANCEL')) {
+        if (!s.waypoint) return { status: 'fail', message: '추가된 휴식 경유지가 없어요.' }
+        rt.cancelWaypoint()
+        return { status: 'success', message: '휴식 경유지를 취소했어요.' }
+      }
       if (fn.includes('REST')) {
         const stop = s.plan?.stop
         if (!stop) return { status: 'fail', message: '경로 위에 쉼터가 없어요.' }

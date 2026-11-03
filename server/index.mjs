@@ -3,6 +3,7 @@
 //   POST /api/realtime/session  → ephemeral client secret for the WebRTC voice copilot
 //   POST /api/tts               → dynamic Korean speech (gpt-4o-mini-tts)
 //   POST /api/coach             → AI trip report from the trip summary (Responses API)
+//   /api/fleet/*                → Pleos Fleet API webhook receiver, SSE stream, REST proxy (server/fleet.mjs)
 //   GET  /api/health
 // Usage: OPENAI_API_KEY=... node server/index.mjs   (PORT defaults to 8790)
 
@@ -10,6 +11,7 @@ import { createServer } from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
 import { extname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { handleFleet } from './fleet.mjs'
 
 const PORT = Number(process.env.PORT ?? 8790)
 const KEY = process.env.OPENAI_API_KEY
@@ -72,6 +74,7 @@ const COPILOT_INSTRUCTIONS = `너는 현대자동차 Pleos Connect 차량에 탑
 async function handleApi(req, res, url) {
   const ip = req.socket.remoteAddress ?? 'x'
   if (url.pathname === '/api/health') return json(res, 200, { ok: true, ai: Boolean(KEY), model: REALTIME_MODEL })
+  if (await handleFleet(req, res, url)) return
   if (!KEY) return json(res, 503, { error: 'OPENAI_API_KEY not configured' })
   if (req.method !== 'POST') return json(res, 405, { error: 'POST only' })
   if (limited(ip)) return json(res, 429, { error: 'rate limited' })

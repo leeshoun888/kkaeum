@@ -1,7 +1,7 @@
 // Physics-lite vehicle simulator used by the web console and as the scenario engine for
 // the demo video. Deterministic given a seed so scenarios replay identically.
 
-import { SIM_CAPS, type Capabilities, type VehicleBus } from './bus'
+import { SIM_CAPS, type BusEvent, type Capabilities, type VehicleBus } from './bus'
 import { pointAtKm, roadClassAt, ROUTE, type Route } from './route'
 import type { Gear, RestStop, VehicleAction, VehicleSignals } from './types'
 
@@ -91,6 +91,11 @@ export function scenarioStart(s: ScenarioConfig, base = new Date()): { start: nu
 
 type DriveState = 'driving' | 'exiting' | 'parked' | 'merging'
 
+const CAUTION_POINTS: [number, string][] = [
+  [172, 'ACCIDENT_PRONE_AREA'],
+  [218, 'FOG_AREA'],
+]
+
 export class SimVehicle implements VehicleBus {
   readonly kind = 'sim' as const
   readonly route: Route
@@ -114,6 +119,16 @@ export class SimVehicle implements VehicleBus {
   turnEvents = 0
   state: DriveState = 'driving'
   waypoint: RestStop | null = null
+  // Pleos signals added in the API audit (simulated so the web demo exercises the same paths)
+  soc = 78 // IONIQ 5 traction battery %
+  seatHeat = 0
+  wheelHeat = 0
+  fanFace = false
+  cabinLight = false
+  blindClosed = false
+  smartGlass = false
+  private geofenceIn = false
+  private events = new Set<(e: BusEvent) => void>()
   parkedUntil = 0
   holdParked = false
   private rnd: () => number
@@ -130,6 +145,30 @@ export class SimVehicle implements VehicleBus {
     this.occupants = scenario.occupants
     this.rnd = mulberry32(seed)
     this.nextTurnAt = start + 5 * 60_000
+    // Cold night start: the driver switched the seat / wheel heating on (warmth that deepens sleepiness).
+    if (scenario.outsideTempC < 10) this.seatHeat = 2
+    if (scenario.outsideTempC < 7) this.wheelHeat = 1
+  }
+
+  onEvent(fn: (e: BusEvent) => void) {
+    this.events.add(fn)
+    return () => void this.events.delete(fn)
+  }
+
+  private emit(e: BusEvent) {
+    this.events.forEach((l) => l(e))
+  }
+
+  /** Simulated NaviHelper.requestTrip: route distance, 95 km/h ETA and ~0.18 %/km consumption. */
+  tripTo(stop: RestStop) {
+    const distanceKm = Math.max(0, stop.km - this.km)
+    const ev: BusEvent = { type: 'tripInfo', poiId: stop.id, distanceKm, etaMin: (distanceKm / 95) * 60, socAtDest: Math.max(0, Math.round(this.soc - distanceKm * 0.18)) }
+    setTimeout(() => this.emit(ev), 0)
+  }
+
+  async removeWaypoint() {
+    this.waypoint = null
+    return true
   }
 
   capabilities(): Capabilities {
@@ -172,13 +211,21 @@ export class SimVehicle implements VehicleBus {
       const k = 1 - Math.exp(-dtMin * 3)
       this.speed = Math.max(0, this.speed + (this.targetSpeed - this.speed) * k)
       if (this.state === 'exiting' && this.speed < 18) this.speed = Math.max(0, this.speed - 30 * dtMin)
+      const prevKm = this.km
       this.km = Math.min(this.route.totalKm, this.km + (this.speed * dtMin) / 60)
+      this.soc = Math.max(3, this.soc - (this.km - prevKm) * 0.18)
       this.gear = 'D'
       this.parkingBrake = false
       if (this.t >= this.nextTurnAt) {
         this.turnEvents += 1
         this.nextTurnAt = this.t + (road === 'urban' ? 3 : 14 + this.rnd() * 10) * 60_000
       }
+    }
+    // Simulated FusedLocation geofence (400 m) around the accepted stop.
+    const near = this.waypoint ? Math.abs(this.waypoint.km - this.km) < 0.4 : false
+    if (this.waypoint && near !== this.geofenceIn) {
+      this.geofenceIn = near
+      this.emit({ type: 'geofence', stopId: this.waypoint.id, transition: near ? 'ENTER' : 'EXIT' })
     }
     // Cabin temperature follows the set point (HVAC time constant ≈ 4 min).
     this.cabinTemp += (this.setTemp - this.cabinTemp) * (1 - Math.exp(-dtMin / 4))
@@ -213,7 +260,26 @@ export class SimVehicle implements VehicleBus {
       routeEtaMin: ((this.route.totalKm - this.km) / 95) * 60,
       roadClass: road,
       outsidePm25: this.scenario.outsidePm25,
+      headlightsOn: (() => {
+        const h = new Date(this.t).getHours()
+        return h >= 18 || h < 7
+      })(),
+      socPct: Math.round(this.soc),
+      rangeKm: Math.round(this.soc * 4.6),
+      seatHeat: this.seatHeat,
+      wheelHeat: this.wheelHeat,
+      raining: false,
+      ...this.navCaution(),
     }
+  }
+
+  /** Simulated navi caution points on the Gyeongbu route (fog-prone Chupungnyeong pass, accident-prone Okcheon curves). */
+  private navCaution(): Pick<VehicleSignals, 'cautionType' | 'cautionM'> {
+    for (const [km, type] of CAUTION_POINTS) {
+      const ahead = (km - this.km) * 1000
+      if (ahead > 0 && ahead < 3000) return { cautionType: type, cautionM: Math.round(ahead) }
+    }
+    return {}
   }
 
   async apply(a: VehicleAction): Promise<boolean> {
@@ -246,6 +312,22 @@ export class SimVehicle implements VehicleBus {
         this.holdParked = false
         this.parkedUntil = this.t + 4 * 60_000
         return true
+      case 'heatOff':
+        this.seatHeat = 0
+        this.wheelHeat = 0
+        return true
+      case 'fanDirection':
+        this.fanFace = true
+        return true
+      case 'cabinLight':
+        this.cabinLight = Boolean(a.value)
+        return true
+      case 'blind':
+        this.blindClosed = a.value === 'close'
+        return true
+      case 'smartGlass':
+        this.smartGlass = Boolean(a.value)
+        return true
       default:
         return true
     }
@@ -253,6 +335,7 @@ export class SimVehicle implements VehicleBus {
 
   async addWaypoint(stop: RestStop): Promise<boolean> {
     this.waypoint = stop
+    this.geofenceIn = false
     return true
   }
 }

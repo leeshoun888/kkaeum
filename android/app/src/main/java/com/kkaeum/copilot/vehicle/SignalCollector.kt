@@ -60,6 +60,9 @@ class SignalCollector(
     private var ticks = 0
     private var running = false
 
+    /** Change listeners first; the polls below remain as a slower fallback (Pleos: < 5 % CPU while driving). */
+    private val listeners = SignalListeners(vehicle, ::put, areaFor) { on -> if (!aaosParkingBrake) put("parkingBrake", on) }
+
     private val steeringListener = object : SteeringWheelAngleListener {
         override fun onSteeringWheelAngleUpdated(angle: Float?) {
             steeringAngle = angle
@@ -102,6 +105,7 @@ class SignalCollector(
         register("SteeringWheel.registerSteeringWheelAngle") { vehicle.getSteeringWheel().registerSteeringWheelAngle(steeringListener) }
         register("TurnSignal.registerTurnSignalState") { vehicle.getTurnSignal().registerTurnSignalState(turnListener) }
         put("turnSignalEvents", 0)
+        listeners.start()
         main.post(tick)
     }
 
@@ -110,14 +114,15 @@ class SignalCollector(
         main.removeCallbacks(tick)
         runCatching { vehicle.getSteeringWheel().unregisterSteeringWheelAngle(steeringListener) }
         runCatching { vehicle.getTurnSignal().unregisterTurnSignalState(turnListener) }
+        listeners.stop()
     }
 
     private val tick = object : Runnable {
         override fun run() {
             if (!running) return
             ticks++
-            if (ticks % 2 == 1) pollTelltales()
-            if (ticks % 3 == 1) pollVehicle()
+            if (!listeners.telltalesLive && ticks % 2 == 1) pollTelltales()
+            if (ticks % (if (listeners.hvacLive) 10 else 3) == 1) pollVehicle()
             sampleSteering()
             accumulateTripFallback()
             push(snapshot())

@@ -779,3 +779,34 @@
 .car-app[data-theme='day'] .probe-orb {
   background: radial-gradient(circle, #00a389 0%, rgba(0, 163, 137, 0.12) 60%, transparent 70%);
 }
+
+/* API-audit additions: waypoint cancel, navi-based ETA tags, trip plan hint */
+.rest-cancel {
+  margin-left: auto;
+  height: 48px;
+  padding: 0 20px;
+  border-radius: 14px;
+  font-family: var(--pleos);
+  font-size: 22px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  color: #c6d0de;
+}
+.car-app[data-theme='day'] .rest-cancel {
+  background: rgba(19, 20, 23, 0.06);
+  color: #44464e;
+}
+.trip-hint {
+  margin: -4px 0 6px !important;
+  font-size: 24px !important;
+  color: #9aa7ba !important;
+}
+.trip-hint b {
+  color: #3cf2c8;
+}
+.car-app[data-theme='day'] .trip-hint {
+  color: #5b6678 !important;
+}
+.car-app[data-theme='day'] .trip-hint b {
+  color: #00a389;
+}

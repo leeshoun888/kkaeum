@@ -18,6 +18,7 @@ class KkaeumBridge(
     private val vehicle: VehicleGateway,
     private val navi: NaviGateway,
     private val voice: VoiceGateway,
+    private val location: com.kkaeum.copilot.location.LocationGateway,
     private val isTrustedPage: () -> Boolean,
 ) {
 
@@ -44,13 +45,39 @@ class KkaeumBridge(
         val address = listOf(stop.optString("highway"), stop.optString("direction"))
             .filter { it.isNotBlank() }
             .joinToString(" ")
-        return navi.addWaypoint(
+        val ok = navi.addWaypoint(
             lat = lat,
             lon = lng,
             name = stop.optString("name").ifBlank { "휴게소" },
             poiId = stop.optString("id"),
             address = address,
         )
+        // Arrival / departure become exact geofence events instead of a gear-P guess.
+        if (ok) location.watchStop(stop.optString("id"), lat, lng)
+        return ok
+    }
+
+    /** Driver cancelled the rest stop: drop the navi waypoint and its geofence. */
+    @JavascriptInterface
+    fun removeWaypoint(): Boolean {
+        if (!isTrustedPage()) return false
+        location.clearWatch()
+        return navi.removeWaypoint()
+    }
+
+    /** Planner candidate `{id, name, lngLat}` → NaviHelper.requestTrip (real ETA / SoC on arrival via onEvent). */
+    @JavascriptInterface
+    fun tripTo(json: String): Boolean {
+        if (!isTrustedPage()) return false
+        val stop = runCatching { JSONObject(json) }.getOrNull() ?: return false
+        val lngLat = stop.optJSONArray("lngLat") ?: return false
+        return navi.tripTo(lngLat.optDouble(1), lngLat.optDouble(0), stop.optString("name"), stop.optString("id"))
+    }
+
+    @JavascriptInterface
+    fun showChargers(): Boolean {
+        if (!isTrustedPage()) return false
+        return navi.showNearbyChargers()
     }
 
     @JavascriptInterface

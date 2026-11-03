@@ -13,6 +13,7 @@ export interface PlannerInput {
   timeOnTaskMin: number
   maxContinuousMin?: number // regulation (e.g. 120 for commercial vehicles)
   safeKss?: number
+  serviceOnly?: boolean // low EV charge: only service areas (chargers), not drowsy shelters
 }
 
 export function kssAt(curve: { min: number; kss: number }[], min: number): number {
@@ -33,6 +34,7 @@ export function planRest(input: PlannerInput): RestPlan | null {
   const speed = Math.max(40, input.avgSpeedKph)
   const ahead = input.stops
     .filter((s) => s.km > input.progressKm + 0.8)
+    .filter((s) => !input.serviceOnly || s.kind === 'service')
     .sort((a, b) => a.km - b.km)
     .map((stop) => {
       const etaMin = ((stop.km - input.progressKm) / speed) * 60
@@ -56,6 +58,7 @@ export function planRest(input: PlannerInput): RestPlan | null {
   else if (input.maxContinuousMin && pick.etaMin >= regLimit - 15)
     reason = `연속운전 ${input.maxContinuousMin}분 규정을 지키는 마지막 쉼터입니다.`
   else reason = `졸음 위험(KSS 7) 도달 전 도착 가능한 마지막 ${pick.stop.kind === 'service' ? '휴게소' : '졸음쉼터'}입니다.`
+  if (input.serviceOnly) reason = `배터리가 낮아 충전이 가능한 휴게소만 골랐어요. ${reason}`
 
   return {
     stop: pick.stop,

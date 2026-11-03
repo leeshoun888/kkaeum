@@ -32,6 +32,11 @@ class WebChannel(private val webView: WebView) {
         eval("window.__kkaeum&&window.__kkaeum.onSignals(${q(json)})")
     }
 
+    /** One-off native events (geofence, navi trip info, waypoint list, ...) → `window.__kkaeum.onEvent(type, json)`. */
+    fun pushEvent(type: String, payload: String) = onMain {
+        eval("window.__kkaeum&&window.__kkaeum.onEvent&&window.__kkaeum.onEvent(${q(type)},${q(payload)})")
+    }
+
     fun pushSpeech(requestId: String, event: String, payload: String) = onMain {
         eval("window.__kkaeum&&window.__kkaeum.onSpeech(${q(requestId)},${q(event)},${q(payload)})")
     }

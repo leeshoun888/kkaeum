@@ -79,6 +79,7 @@ class GleoReceiver : BroadcastReceiver() {
     private fun fallback(function: String): JSONObject = when (function) {
         "GET_ALERTNESS_STATUS" -> response(function, "fail", "KKAEUM has not estimated your alertness yet.")
         "ADD_REST_STOP" -> response(function, "fail", "KKAEUM could not add a rest stop right now.")
+        "CANCEL_REST_STOP" -> response(function, "fail", "KKAEUM could not remove the rest stop right now.")
         else -> response(function, "fail", "A power nap can start only after you park.")
     }
 
@@ -91,7 +92,7 @@ class GleoReceiver : BroadcastReceiver() {
         const val ACTION_RESPONSE = "ai.pleos.playground.intent.action.APP_ACTION_RESPONSE"
         const val EXTRA_PARAM = "ACTION_PARAM"
         const val REPLY_DEADLINE_MS = 5_500L // Gleo times out at 7 s
-        val FUNCTIONS = setOf("GET_ALERTNESS_STATUS", "ADD_REST_STOP", "START_POWER_NAP")
+        val FUNCTIONS = setOf("GET_ALERTNESS_STATUS", "ADD_REST_STOP", "START_POWER_NAP", "CANCEL_REST_STOP")
         val STATUSES = setOf("success", "asking", "fail")
         val MODES = setOf("voice", "beep", "silent")
     }

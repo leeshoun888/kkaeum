@@ -17,7 +17,13 @@
     <uses-permission android:name="pleos.car.permission.CAR_LIGHTS" />
     <uses-permission android:name="pleos.car.permission.CAR_WINDOWS" />
     <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />
+    <!-- Keeps monitoring alive while navigation is full screen (see monitor/MonitorService). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="pleos.car.permission.CAR_SAFETY" />
+    <!-- EV state of charge / range for charge-aware rest stops. -->
+    <uses-permission android:name="pleos.car.permission.CAR_ENERGY" />
     <!-- getTelltalesInfo (DRIVER_ATTENTION) is refused without it on emulator 2.1.0; needs App Market review on vehicles. -->
     <uses-permission android:name="pleos.car.permission.PRIVATE_CAR_SAFETY" />
 
@@ -73,6 +79,15 @@
             <meta-data android:name="distractionOptimized" android:value="true" />
         </activity>
 
+        <service
+            android:name=".monitor.MonitorService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Drowsy-driving monitoring of vehicle signals while another app (navigation) is in the foreground" />
+        </service>
+
         <!-- Gleo Interface: component="service" in assets/schema.json → Gleo sends a broadcast whose action is the
              function name. Exported because Gleo is another package; the receiver only accepts these 3 actions. -->
         <receiver
@@ -81,6 +96,7 @@
             <intent-filter><action android:name="GET_ALERTNESS_STATUS" /></intent-filter>
             <intent-filter><action android:name="ADD_REST_STOP" /></intent-filter>
             <intent-filter><action android:name="START_POWER_NAP" /></intent-filter>
+            <intent-filter><action android:name="CANCEL_REST_STOP" /></intent-filter>
         </receiver>
     </application>
 </manifest>

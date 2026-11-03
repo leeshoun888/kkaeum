@@ -18,6 +18,17 @@ export interface OrchestratorContext {
 
 const MIN = 60_000
 
+const CAUTION_LABEL: Record<string, string> = {
+  ACCIDENT_PRONE_AREA: '사고 다발 구간',
+  FOG_AREA: '안개 잦은 구간',
+  DOWNHILL_CAUTION_AREA: '급경사 내리막',
+  SLIPPERY_ROAD_ALERT: '미끄러운 도로',
+  WILDLIFE_CROSSING: '야생동물 출몰 구간',
+  FALLING_ROCK_AREA: '낙석 주의 구간',
+  WRONG_WAY_DRIVING_ALERT: '역주행 경보',
+  HIGHWAY_CONSTRUCTION: '도로 공사 구간',
+}
+
 export const AMBIENT = {
   calm: { color: '#3CF2C8', brightness: 35 },
   cool: { color: '#8FD8FF', brightness: 70 },
@@ -75,6 +86,8 @@ export class Orchestrator {
         { kind: 'fan', value: 2, reason: '저소음 송풍' },
         { kind: 'freshAir', value: true, reason: '수면 중 CO₂ 축적 방지' },
         { kind: 'ambient', value: AMBIENT.nap, reason: '저조도 웜톤 · 멜라토닌 억제 최소화' },
+        { kind: 'blind', value: 'close', reason: '빛 차단' },
+        { kind: 'smartGlass', value: true, reason: '수면 중 프라이버시·차광' },
         { kind: 'speak', value: 'nap_start', reason: '안내' },
       ],
     }
@@ -93,7 +106,10 @@ export class Orchestrator {
         { kind: 'ambient', value: AMBIENT.wake, reason: '고휘도 주광색 (각성 촉진)' },
         { kind: 'temperature', value: 20.5, reason: '서늘한 공기로 각성' },
         { kind: 'fan', value: 4, reason: '환기 강화' },
-        { kind: 'seatRecline', value: 8, reason: '운전 자세 복귀' },
+        { kind: 'seatRecline', value: 8, reason: '운전 자세 복귀 (저장된 등받이 위치로 정확히)' },
+        { kind: 'cabinLight', value: true, reason: '실내등으로 각성' },
+        { kind: 'blind', value: 'open', reason: '자연광 유입' },
+        { kind: 'smartGlass', value: false, reason: '차광 해제' },
         { kind: 'speak', value: 'nap_wake', reason: '기상 안내' },
         { kind: 'probe', reason: '출발 전 반응속도 확인' },
       ],
@@ -113,6 +129,10 @@ export class Orchestrator {
     if (this.mode === 'waking') {
       if (t - (this.lastFire['wake'] ?? t) > 3 * MIN) this.mode = parked ? 'parked' : 'driving'
       return out
+    }
+    if (!parked && this.lastFire['wake'] && !this.lastFire['cabinOff']) {
+      this.lastFire['cabinOff'] = t
+      out.push({ t, level: 0, title: '출발 · 실내등 끄기', detail: '주행 중 실내등은 시야를 방해합니다.', actions: [{ kind: 'cabinLight', value: false, reason: '주행 시작' }] })
     }
     this.mode = parked ? 'parked' : 'driving'
 
@@ -171,10 +191,27 @@ export class Orchestrator {
       return out
     }
 
+    // Navi: right before a turn / exit nothing talks to the driver (NaviHelper TBT).
+    const manoeuvre = (sig.tbtNextM ?? Infinity) < 400
+
+    // Navi caution points (accident-prone, fog, downhill, ...) while already drowsy → one heads-up each.
+    if (sig.cautionType && (sig.cautionM ?? Infinity) < 2500 && est.level >= 1 && !manoeuvre && this.ready(`caution:${sig.cautionType}`, t, 20)) {
+      out.push({
+        t,
+        level: est.level,
+        title: `전방 ${CAUTION_LABEL[sig.cautionType] ?? '위험 구간'} ${((sig.cautionM ?? 0) / 1000).toFixed(1)}km · 각성 유지`,
+        detail: '내비 위험 지점 정보와 졸음 예측을 함께 보고 미리 알려 드립니다.',
+        actions: [
+          { kind: 'fanDirection', value: 'FACE', reason: '얼굴 쪽 서늘한 기류' },
+          { kind: 'speak', value: 'caution', reason: '위험 구간 사전 안내' },
+        ],
+      })
+    }
+
     // ── Predictive rest proposal (fires before the driver feels sleepy) ───────
     if (plan && plan.stop.id !== this.proposedStopId && plan.stop.id !== this.acceptedStopId) {
       const urgent = est.minutesToDanger !== null && est.minutesToDanger < plan.etaMin + 25
-      if ((urgent || est.level >= 2) && this.ready('plan', t, 8)) {
+      if ((urgent || est.level >= 2) && !manoeuvre && this.ready('plan', t, 8)) {
         this.proposedStopId = plan.stop.id
         out.push({
           t,
@@ -200,13 +237,15 @@ export class Orchestrator {
         detail: '서늘한 공기·송풍·주광색 앰비언트로 각성 유지 (운전 조작 개입 없음)',
         actions: [
           { kind: 'temperature', value: Math.max(19.5, sig.setTempC - 1.5), reason: '체온 하강 → 각성' },
-          { kind: 'fan', value: Math.min(8, sig.fanSpeed + 1), reason: '얼굴 쪽 기류 증가' },
+          { kind: 'fan', value: Math.min(8, sig.fanSpeed + 1), reason: '기류 증가' },
+          { kind: 'fanDirection', value: 'FACE', reason: '얼굴 쪽 기류' },
+          ...((sig.seatHeat ?? 0) > 0 || (sig.wheelHeat ?? 0) > 0 ? [{ kind: 'heatOff' as const, reason: '열선 끄기 (온열은 졸음을 키움)' }] : []),
           { kind: 'ambient', value: AMBIENT.cool, reason: '청백색 광 · 각성 효과' },
           { kind: 'speak', value: 'refresh', reason: '짧은 음성 안내' },
         ],
       })
     }
-    if (est.level >= 2 && this.ready('L2', t, 12)) {
+    if (est.level >= 2 && !manoeuvre && this.ready('L2', t, 12)) {
       this.engaged = true
       out.push({
         t,
@@ -215,6 +254,7 @@ export class Orchestrator {
         detail: '경로 기반 퀴즈/대화로 인지 각성을 유도하고, 음성 반응속도로 졸음을 직접 측정합니다.',
         actions: [
           { kind: 'seatVent', value: 3, reason: '등·허벅지 냉각' },
+          { kind: 'lumbarPulse', reason: '요추 지지대 촉각 신호' },
           { kind: 'engage', reason: '대화형 각성 유지' },
           { kind: 'probe', reason: '음성 PVT' },
         ],
@@ -226,11 +266,13 @@ export class Orchestrator {
         { kind: 'speak', value: 'rest_now', reason: '휴식 권고' },
       ]
       if (plan && plan.stop.id !== this.acceptedStopId)
-        acts.unshift({ kind: 'waypoint', value: { stop: plan.stop, needsConfirm: !sig.dawWarning }, reason: '가장 안전한 쉼터 경유' })
+        acts.unshift({ kind: 'waypoint', value: { stop: plan.stop, needsConfirm: !(sig.dawWarning || sig.dmsDrowsy) }, reason: '가장 안전한 쉼터 경유' })
+      // EV with little charge left: show navi's nearby chargers so the stop can double as a charging stop.
+      if ((sig.socPct ?? 100) < 25) acts.push({ kind: 'showChargers', reason: `배터리 ${sig.socPct}% · 충전 겸 휴식` })
       out.push({
         t,
         level: 3,
-        title: sig.dawWarning ? 'L3 차량 주의 경고 연동 · 즉시 휴식' : 'L3 휴식 필요',
+        title: sig.dmsDrowsy ? 'L3 차량 졸음 감지(DMS) 연동 · 즉시 휴식' : sig.dawWarning ? 'L3 차량 주의 경고 연동 · 즉시 휴식' : 'L3 휴식 필요',
         detail: `KSS ${est.kss.toFixed(1)} · 졸음운전 위험 구간 진입`,
         actions: acts,
       })

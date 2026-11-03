@@ -40,6 +40,22 @@ export interface VehicleSignals {
   routeRemainingKm?: number
   routeEtaMin?: number
   roadClass?: 'highway' | 'urban' | 'rural'
+  // Pleos listeners added for the fatigue model and charge-aware stops
+  headlightsOn?: boolean // low beam on → driving in the dark
+  cruiseTargetKph?: number
+  raining?: boolean // front wiper running
+  brakeEvents?: number // cumulative pedal presses
+  socPct?: number // traction battery state of charge
+  rangeKm?: number
+  seatHeat?: number // driver seat heating level (0 = off)
+  wheelHeat?: number // steering-wheel heating level
+  dmsDrowsy?: boolean // vehicle DMS drowsiness warning (Pleos vendor property, privileged)
+  // NaviHelper
+  tbtNextM?: number // distance to the next manoeuvre
+  tbtNext?: string
+  cautionType?: string // nearest risk point ahead (FOG_AREA, ACCIDENT_PRONE_AREA, …)
+  cautionM?: number
+  navStatus?: string
   /** Vehicle UI night mode (Configuration.uiMode), sent by the APK host. */
   uiNight?: boolean
   outsidePm25?: number // µg/m³ (from public air quality data along the route)
@@ -60,6 +76,8 @@ export interface Contribution {
     | 'circadian'
     | 'postLunch'
     | 'timeOnTask'
+    | 'darkness'
+    | 'warmth'
     | 'monotony'
     | 'co2'
     | 'thermal'
@@ -100,6 +118,13 @@ export type ActionKind =
   | 'probe'
   | 'napStart'
   | 'napWake'
+  | 'heatOff' // seat + steering-wheel heating off (warmth deepens sleepiness)
+  | 'fanDirection' // air to the face
+  | 'cabinLight' // wake sequence
+  | 'lumbarPulse' // haptic nudge through the lumbar support
+  | 'blind' // nap shade (parked)
+  | 'smartGlass' // nap privacy dimming (parked)
+  | 'showChargers' // navi nearby-charging list (low battery)
 
 export interface VehicleAction {
   kind: ActionKind

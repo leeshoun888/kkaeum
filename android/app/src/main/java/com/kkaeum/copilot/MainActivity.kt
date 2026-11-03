@@ -70,8 +70,12 @@ class MainActivity : ComponentActivity() {
                 collector.put("routeEtaMin", eta)
             },
             onLocation = ::onLocation,
+            onSignal = { key, value -> collector.put(key, value) },
+            onEvent = { type, payload -> channel.pushEvent(type, payload.toString()) },
         )
-        location = LocationGateway(this, ::onLocation)
+        location = LocationGateway(this, ::onLocation) { stopId, transition ->
+            channel.pushEvent("geofence", org.json.JSONObject().put("stopId", stopId).put("transition", transition).toString())
+        }
         carProps = CarPropertySource(this) { key, value ->
             if (key == "parkingBrake") collector.putParkingBrakeFromCar(value as Boolean) else collector.put(key, value)
         }
@@ -97,9 +101,11 @@ class MainActivity : ComponentActivity() {
         navi.start { barrier.arrive() }
 
         requestRuntimePermissions()
+        com.kkaeum.copilot.monitor.MonitorService.start(this)
     }
 
     override fun onDestroy() {
+        com.kkaeum.copilot.monitor.MonitorService.stop(this)
         SdkTrace.sink = null
         channel.detach()
         collector.stop()
@@ -167,7 +173,7 @@ class MainActivity : ComponentActivity() {
                 return true
             }
         }
-        webView.addJavascriptInterface(KkaeumBridge(vehicle, navi, voice) { trustedPage }, JS_NAME)
+        webView.addJavascriptInterface(KkaeumBridge(vehicle, navi, voice, location) { trustedPage }, JS_NAME)
     }
 
     private fun loadUi() {

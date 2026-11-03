@@ -64,6 +64,8 @@ cd ../android && ./gradlew assembleRelease
 - 요구사항: Android API 28+, Gradle 8+, JDK 17, Kotlin (Pleos 개발 환경 요구사항)
 - SDK: `ai.pleos.playground:Vehicle:2.3.2`, `NaviHelper:3.0.5`, `TextToSpeech:3.3.1`, `SpeechToText:3.3.1`, `FusedLocation:1.1.3` (Maven: `https://nexus-playground.pleos.ai/repository/maven-releases/`)
 - 테스트 환경: Pleos Connect Emulator v2.1.0 (API 34) + Virtual Console(`adb forward tcp:8088 tcp:8088`): 공조·텔테일(`DRIVER_ATTENTION`)·기어를 조작해 개입을 확인.
+- 연동 범위(에뮬레이터 실기 검증): Vehicle(HVAC·Seat·Light·Window·Safety·Body·EV·Trip 리스너와 제어), CarPropertyManager(속도·기어·외기온·DMS 벤더 속성), NaviHelper(경유지 추가·취소, requestTrip ETA, TBT, 위험구간, 내비 상태, 충전소 화면), FusedLocation(위치·지오펜스), TTS/STT, Gleo 4개 함수, Pleos Fleet Webhook·REST 토큰 플로우(`server/fleet.mjs`).
+- 연동 불가: 운전자 오디오존(시스템 API), Fleet REST 실데이터(계약 필요), Vehicle Data API(유럽 전용), Platform SDK DMS(특권 앱), LLM SDK(서비스 종료).
 - 차량 제어(CONTROL_*) 권한은 Pleos App Market 사전 승인 대상이며, 미승인/미지원 시 앱은 음성 권고로 자동 대체합니다.
 
 ## 근거 데이터

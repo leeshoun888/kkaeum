@@ -149,18 +149,26 @@ function RestCard({ snap, plan, proposal, waypoint }: Pick<Snapshot, 'plan' | 'p
   const rt = useSim((s) => s.runtime)!
   const pal = usePalette()
   const km = snap.sig.routeProgressKm ?? 0
+  const navTrip = (id: string) => (snap.trip && snap.trip.poiId === id ? snap.trip : null)
+  const charging = (snap.sig.socPct ?? 100) < 30
   if (waypoint) {
+    const trip = navTrip(waypoint.id)
     const left = Math.max(0, waypoint.km - km)
+    const arrived = snap.arrivedAt === waypoint.id
     return (
       <div className="card rest set">
-        <div className="card-k"><IcCheck size={28} /> 경유지로 안내 중</div>
+        <div className="card-k">
+          <IcCheck size={28} /> {arrived ? '쉼터 도착 확인 (지오펜스)' : '경유지로 안내 중'}
+          <button className="rest-cancel" onClick={() => rt.cancelWaypoint()}>취소</button>
+        </div>
         <div className="rest-name">{waypoint.name}</div>
         <div className="rest-meta">
           <span><b>{left.toFixed(0)}</b>km</span>
-          <span><b>{Math.round((left / 95) * 60)}</b>분 후 도착</span>
+          <span><b>{Math.round(trip ? trip.etaMin : (left / 95) * 60)}</b>분 후 도착{trip ? ' · 내비 기준' : ''}</span>
           <span className="tag">{waypoint.kind === 'service' ? '휴게소' : '졸음쉼터'}</span>
+          {trip && snap.sig.socPct !== undefined && <span className="tag">도착 배터리 {trip.socAtDest}%</span>}
         </div>
-        <p className="rest-why">도착하면 20분 파워냅을 준비해 드릴게요.</p>
+        <p className="rest-why">{charging && waypoint.kind === 'service' ? '배터리가 낮아 충전 겸 휴식으로 골랐어요. ' : ''}도착하면 커피 한 잔과 15분 파워냅을 준비해 드릴게요.</p>
       </div>
     )
   }
@@ -175,7 +183,8 @@ function RestCard({ snap, plan, proposal, waypoint }: Pick<Snapshot, 'plan' | 'p
       <div className="rest-name">{target.stop.name}</div>
       <div className="rest-meta">
         <span><b>{Math.max(0, target.stop.km - km).toFixed(0)}</b>km</span>
-        <span><b>{Math.round(target.etaMin)}</b>분</span>
+        <span><b>{Math.round(navTrip(target.stop.id)?.etaMin ?? target.etaMin)}</b>분{navTrip(target.stop.id) ? ' · 내비 기준' : ''}</span>
+        {charging && target.stop.kind === 'service' && <span className="tag">⚡ 충전 겸 휴식</span>}
         {target.kssAtArrival !== undefined && (
           <span>도착 시 <b style={{ color: pal.kss(target.kssAtArrival) }}>{target.kssAtArrival.toFixed(1)}</b></span>
         )}
@@ -243,6 +252,26 @@ function ActionStrip({ snap }: { snap: Snapshot }) {
   )
 }
 
+/** From navi's recent destinations: how long the next trip probably is and how many rests it needs. */
+function TripPlanHint({ snap }: { snap: Snapshot }) {
+  const pos = snap.sig.position
+  const dest = snap.recent[0]
+  if (!pos || !dest) return null
+  const R = 6371
+  const toR = Math.PI / 180
+  const dLat = (dest.lat - pos[1]) * toR
+  const dLon = (dest.lon - pos[0]) * toR
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(pos[1] * toR) * Math.cos(dest.lat * toR) * Math.sin(dLon / 2) ** 2
+  const km = 2 * R * Math.asin(Math.sqrt(h)) * 1.3
+  if (km < 30) return null
+  const rests = Math.max(0, Math.ceil((km / 95) * 60 / 110) - 1)
+  return (
+    <p className="trip-hint">
+      최근 목적지 <b>{dest.name}</b>까지 약 {Math.round(km)}km · 졸음 예측상 휴식 <b>{rests}회</b> 계획을 세워 둘게요.
+    </p>
+  )
+}
+
 function ParkedView({ snap }: { snap: Snapshot }) {
   const rt = useSim((s) => s.runtime)!
   const pal = usePalette()
@@ -257,6 +286,7 @@ function ParkedView({ snap }: { snap: Snapshot }) {
           <br />
           좌석을 젖히고, 공기·온도·조명을 수면에 맞추고, 정확한 시간에 깨워 드려요.
         </p>
+        <TripPlanHint snap={snap} />
         <div className="nap-opts">
           {[10, 15, 20].map((m) => (
             <button key={m} className={`big ${min === m ? 'primary' : ''}`} onClick={() => setMin(m)}>

@@ -11,7 +11,7 @@ MainActivity ─ VehicleGateway (Vehicle SDK 2.3.2: capabilities + setters)
              ─ SignalCollector (Vehicle SDK reads/listeners + CarPropertySource [speed, gear, parking brake, outside temp])
              ─ NaviGateway (NaviHelper 3.0.5)   ─ LocationGateway (FusedLocation 1.1.3)
              ─ VoiceGateway (bundled mp3 / TextToSpeech 3.3.1 / SpeechToText 3.3.1)
-GleoReceiver (assets/schema.json, 3 functions) ─▶ window.__kkaeum.onGleo ─▶ APP_ACTION_RESPONSE broadcast (≤ 7 s)
+GleoReceiver (assets/schema.json, 4 functions) ─▶ window.__kkaeum.onGleo ─▶ APP_ACTION_RESPONSE broadcast (≤ 7 s)
 ```
 
 | Item | Value |

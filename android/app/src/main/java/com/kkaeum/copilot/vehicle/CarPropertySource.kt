@@ -16,6 +16,10 @@ import kotlin.math.abs
  * - GEAR_SELECTION, PARKING_BRAKE_ON (CAR_POWERTRAIN)
  * - ENV_OUTSIDE_TEMPERATURE (CAR_EXTERIOR_ENVIRONMENT)
  *
+ * - DMS_DROWSINESS_WARNING (Pleos vendor property, Car.PERMISSION_VENDOR_EXTENSION): the vehicle's own camera-based
+ *   drowsiness warning. Ids from the Pleos Platform SDK permission matrix (PleosVehiclePropertyIds 557903627,
+ *   VehiclePropertyVendorIds 555810772). Third-party apps normally lack the permission; it is tried and traced.
+ *
  * Support is checked with getCarPropertyConfig(); missing properties are traced and skipped.
  * The Pleos emulator's Virtual Console has no speed card, so speed stays 0 there.
  */
@@ -36,6 +40,7 @@ class CarPropertySource(private val context: Context, private val onValue: (key:
                     (value.value as? Boolean)?.let { onValue("parkingBrake", it) }
                 VehiclePropertyIds.ENV_OUTSIDE_TEMPERATURE ->
                     (value.value as? Float)?.let { onValue("outsideTempC", it.toDouble()) }
+                in DMS_DROWSINESS_IDS -> onValue("dmsDrowsy", value.value.isActive())
             }
         }
 
@@ -58,10 +63,11 @@ class CarPropertySource(private val context: Context, private val onValue: (key:
         subscribe(m, VehiclePropertyIds.GEAR_SELECTION, CarPropertyManager.SENSOR_RATE_ONCHANGE)
         subscribe(m, VehiclePropertyIds.PARKING_BRAKE_ON, CarPropertyManager.SENSOR_RATE_ONCHANGE)
         subscribe(m, VehiclePropertyIds.ENV_OUTSIDE_TEMPERATURE, CarPropertyManager.SENSOR_RATE_ONCHANGE)
+        for (id in DMS_DROWSINESS_IDS) subscribe(m, id, CarPropertyManager.SENSOR_RATE_ONCHANGE, "DMS_DROWSINESS_WARNING($id)")
     }
 
-    private fun subscribe(m: CarPropertyManager, id: Int, rate: Float) {
-        val call = "CarPropertyManager.registerCallback(${VehiclePropertyIds.toString(id)})"
+    private fun subscribe(m: CarPropertyManager, id: Int, rate: Float, label: String = VehiclePropertyIds.toString(id)) {
+        val call = "CarPropertyManager.registerCallback($label)"
         try {
             if (m.getCarPropertyConfig(id) == null) {
                 SdkTrace.skip(call, "property not supported")
@@ -88,7 +94,18 @@ class CarPropertySource(private val context: Context, private val onValue: (key:
         else -> if (gear >= GEAR_DRIVE) "D" else null // DRIVE and GEAR_1..GEAR_9
     }
 
+    /** Vendor properties report Boolean, Int (level) or an Int array depending on the build. */
+    private fun Any?.isActive(): Boolean = when (this) {
+        is Boolean -> this
+        is Number -> toInt() != 0
+        is IntArray -> any { it != 0 }
+        is Array<*> -> any { (it as? Number)?.toInt()?.let { v -> v != 0 } ?: (it == true) }
+        else -> false
+    }
+
     private companion object {
+        val DMS_DROWSINESS_IDS = setOf(557903627, 555810772)
+
         // android.car.VehicleGear
         const val GEAR_UNKNOWN = 0x0
         const val GEAR_NEUTRAL = 0x1

@@ -1084,3 +1084,127 @@
     display: none;
   }
 }
+
+/* Pleos Fleet API pipeline panel */
+.fleet .fl-api {
+  margin-top: 18px;
+  padding: 22px 24px;
+  border-radius: 20px;
+}
+.fleet .fl-api-h {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.fleet .fl-api-h h2 {
+  margin: 4px 0 0;
+  font-size: 20px;
+}
+.fleet .fl-api-src {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  padding: 6px 12px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #9aa7ba;
+}
+.fleet .fl-api-src i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffb547;
+}
+.fleet .fl-api-src.live i {
+  background: #3cf2c8;
+  box-shadow: 0 0 10px #3cf2c8;
+}
+.fleet .fl-api-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 18px;
+}
+.fleet .fl-api-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  align-content: start;
+}
+.fleet .fl-api-stats > div {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.fleet .fl-api-stats b {
+  display: block;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.fleet .fl-api-stats span {
+  font-size: 11.5px;
+  color: #8a96a8;
+}
+.fleet .fl-api-stats p {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #9aa7ba;
+}
+.fleet .fl-api-stats code,
+.fleet .fl-api-norm {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11.5px;
+}
+.fleet .fl-api-stats code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(60, 242, 200, 0.08);
+  color: #9ff5df;
+}
+.fleet .fl-api-norm {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(60, 242, 200, 0.06);
+  color: #c9f7ec;
+}
+.fleet .fl-api-norm span {
+  color: #3cf2c8;
+  font-weight: 700;
+  margin-right: 6px;
+}
+.fleet .fl-api-json {
+  margin: 0;
+  max-height: 230px;
+  overflow: hidden;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11px;
+  line-height: 1.5;
+  color: #a9d8cf;
+  -webkit-mask: linear-gradient(180deg, #000 75%, transparent);
+  mask: linear-gradient(180deg, #000 75%, transparent);
+}
+.fleet .fl-api-ext {
+  width: 100%;
+  margin-top: 14px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.fleet .fl-api-ext th,
+.fleet .fl-api-ext td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.fleet .fl-api-src {
+  flex: none;
+  white-space: nowrap;
+}

@@ -41,6 +41,7 @@ class VehicleGateway(context: Context, private val isParked: () -> Boolean) {
     private val seat get() = vehicle.getSeat()
     private val light get() = vehicle.getLight()
     private val window get() = vehicle.getWindow()
+    private val comfort = ComfortActuators(vehicle, isParked)
 
     // Capability cache (written on SDK callback threads, read on the JS bridge thread).
     @Volatile private var recircAreas: List<SeatArea> = emptyList()
@@ -90,9 +91,10 @@ class VehicleGateway(context: Context, private val isParked: () -> Boolean) {
     // ---- capabilities -------------------------------------------------------------------------------------
 
     /** Number of [Barrier.arrive] calls [probe] will make. */
-    val probeCount = 11
+    val probeCount = 11 + ComfortActuators.PROBES
 
     fun probe(barrier: Barrier) {
+        comfort.probe(barrier)
         check("HVAC.checkHvacPowerCapabilities", barrier) { done, fail ->
             hvac.checkHvacPowerCapabilities({ cfg: CapabilityConfig, areas: List<SeatArea> ->
                 if (cfg.writable) powerAreas = areas
@@ -173,6 +175,7 @@ class VehicleGateway(context: Context, private val isParked: () -> Boolean) {
         .put("seatRecline", reclineAreas.isNotEmpty())
         .put("window", windowBounds.isNotEmpty())
         .put("daw", dawReadable)
+        .also { o -> comfort.capabilities().forEach { (k, v) -> o.put(k, v) } }
 
     /**
      * Runs one capability call; retries ERROR_SERVICE_CONNECTION_FAILURE because `initialize()` has no
@@ -215,6 +218,7 @@ class VehicleGateway(context: Context, private val isParked: () -> Boolean) {
             "seatVent" -> value.asDouble()?.let { setSeatVentilation(it.roundToInt()) } ?: invalid(kind, value)
             "seatRecline" -> value.asDouble()?.let(::recline) ?: invalid(kind, value)
             "window" -> value.asDouble()?.let(::setWindow) ?: invalid(kind, value)
+            "heatOff", "fanDirection", "cabinLight", "lumbarPulse", "blind", "smartGlass" -> comfort.act(kind, value) ?: false
             "napStart", "napWake", "probe", "engage" -> {
                 SdkTrace.line("act($kind) → handled in app (no Vehicle SDK call)")
                 true
@@ -339,9 +343,22 @@ class VehicleGateway(context: Context, private val isParked: () -> Boolean) {
         val area = reclineAreas.pickDriver() ?: return unsupported(call)
         val delta = targetDeg - reclineDeg
         if (abs(delta) < 2.0) return true
+        // Exact return to the pre-nap position when the seat reports it; otherwise fall back to timed jogs.
+        if (delta < 0 && comfort.restoreBackrest(area) { jog(area, delta) }) {
+            reclineDeg = targetDeg
+            return true
+        }
+        if (delta > 0) comfort.saveBackrest(area)
+        jog(area, delta)
+        reclineDeg = targetDeg
+        return true
+    }
+
+    /** Timed jog of the backrest by [delta] degrees, always followed by STOP. */
+    private fun jog(area: SeatArea, delta: Double) {
+        val call = "Seat.moveSeatBackrestAngle"
         val dir = if (delta > 0) MoveControl.BACKWARD else MoveControl.FORWARD
         val runMs = (abs(delta) / JOG_DEG_PER_SEC * 1000).toLong().coerceIn(500L, MAX_JOG_MS)
-
         pendingReclineStop?.let { main.removeCallbacks(it) }
         val start = "$call(${area.label()}, $dir)"
         seat.moveSeatBackrestAngle(area, dir, { _: SeatArea?, _: MoveControl? -> SdkTrace.ok(start) }, { e -> SdkTrace.fail(start, e) })
@@ -352,8 +369,6 @@ class VehicleGateway(context: Context, private val isParked: () -> Boolean) {
         }
         pendingReclineStop = stop
         main.postDelayed(stop, runMs)
-        reclineDeg = targetDeg
-        return true
     }
 
     private fun traceCurrentAmbientColor(area: SeatArea) {
@@ -382,7 +397,7 @@ class VehicleGateway(context: Context, private val isParked: () -> Boolean) {
     }
 }
 
-private val CapabilityConfig.writable: Boolean
+internal val CapabilityConfig.writable: Boolean
     get() = accessType == AccessType.WRITE || accessType == AccessType.READ_WRITE
 
 private fun CapabilityConfig.summary(detail: Any): String = "$accessType $detail"

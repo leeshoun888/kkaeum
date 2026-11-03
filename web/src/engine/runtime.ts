@@ -2,7 +2,7 @@
 // executes actions, and publishes immutable snapshots for the UI.
 
 import { DEFAULT_CABIN, stepCo2 } from './co2'
-import type { Capabilities, VehicleBus } from './bus'
+import type { BusEvent, Capabilities, VehicleBus } from './bus'
 import { FatigueModel, kssFromReaction } from './fatigue'
 import { Orchestrator, type Mode } from './orchestrator'
 import { planRest } from './planner'
@@ -52,6 +52,12 @@ export interface Snapshot {
   probes: ProbeResult[]
   speaking: string | null
   stats: { interventions: number; co2Avoided: number; restMin: number; maxKss: number }
+  /** Navi's own ETA / distance / SoC on arrival for the proposed or accepted stop (NaviHelper.requestTrip). */
+  trip: { poiId: string; distanceKm: number; etaMin: number; socAtDest: number } | null
+  /** Where the driver usually goes (NaviHelper recent destinations), for pre-trip rest planning. */
+  recent: { name: string; lat: number; lon: number }[]
+  /** Arrival at the accepted stop confirmed by the FusedLocation geofence. */
+  arrivedAt: string | null
 }
 
 export interface RuntimeHooks {
@@ -86,6 +92,10 @@ export class Runtime {
   private stats = { interventions: 0, co2Avoided: 0, restMin: 0, maxKss: 0 }
   private listeners = new Set<(s: Snapshot) => void>()
 
+  trip: Snapshot['trip'] = null
+  recent: Snapshot['recent'] = []
+  arrivedAt: string | null = null
+
   constructor(bus: VehicleBus, profile: DriverProfile, stops: RestStop[]) {
     this.bus = bus
     this.stops = stops
@@ -93,6 +103,49 @@ export class Runtime {
     this.fatigue = new FatigueModel(profile, sig.t)
     this.co2 = DEFAULT_CABIN.outdoorPpm + (sig.recirculation ? 180 : 90)
     this.est = this.fatigue.estimate(sig, this.co2)
+    bus.onEvent?.((e) => this.onBusEvent(e))
+  }
+
+  /** Vehicle / navi events from the Pleos SDKs (geofence, real trip ETA, waypoint list, recents). */
+  private onBusEvent(e: BusEvent) {
+    const t = this.bus.read().t
+    switch (e.type) {
+      case 'tripInfo':
+        this.trip = { poiId: e.poiId, distanceKm: e.distanceKm, etaMin: e.etaMin, socAtDest: e.socAtDest }
+        if (this.proposal && this.proposal.stop.id === e.poiId) this.proposal = { ...this.proposal, etaMin: e.etaMin }
+        break
+      case 'geofence': {
+        const stop = this.waypoint
+        if (!stop || stop.id !== e.stopId) break
+        if (e.transition === 'ENTER') {
+          this.arrivedAt = stop.id
+          this.timeline.push({
+            t,
+            level: 0,
+            title: `쉼터 도착 확인 · ${stop.name}`,
+            detail: 'FusedLocation 지오펜스로 도착을 확인했습니다. 정차하면 파워냅을 준비합니다.',
+            actions: [{ kind: 'speak', value: 'arrived', reason: '도착 안내' }],
+          })
+          this.hooks.speak?.('arrived')
+        } else {
+          this.timeline.push({ t, level: 0, title: `쉼터 출발 · ${stop.name}`, detail: `휴식 ${Math.round(this.fatigue.restMin)}분 후 다시 출발했습니다.`, actions: [] })
+          this.arrivedAt = null
+        }
+        break
+      }
+      case 'waypoints':
+        // Navi confirms (or not) that our stop is on the route; a missing stop means the driver removed it.
+        if (this.waypoint && e.items.length && !e.items.some((w) => w.poiId === this.waypoint!.id || w.name === this.waypoint!.name)) {
+          this.timeline.push({ t, level: 0, title: '경유지가 내비에서 제거됨', detail: '운전자가 내비에서 경유지를 지웠습니다. 다음 계획에서 다시 제안합니다.', actions: [] })
+          this.waypoint = null
+        }
+        break
+      case 'recentDestinations':
+        this.recent = e.items
+        break
+      default:
+        break
+    }
   }
 
   subscribe(fn: (s: Snapshot) => void) {
@@ -148,6 +201,10 @@ export class Runtime {
         curve,
         timeOnTaskMin: this.fatigue.timeOnTaskMin,
         maxContinuousMin: this.fleetMode ? 120 : undefined,
+        // EV low on charge: drowsy shelters have no chargers, so only service areas qualify.
+        serviceOnly: (sig.socPct ?? 100) < 30,
+        // Rain or a navi risk point ahead: keep a wider margin below the danger line.
+        safeKss: sig.raining || sig.cautionType ? 6.3 : undefined,
       })
     }
 
@@ -213,6 +270,8 @@ export class Runtime {
             createdAt: t,
             createdWall: performance.now(),
           }
+          // Refine the model's ETA with the navigation's own route (answer arrives as a 'tripInfo' event).
+          this.bus.tripTo?.(v.stop)
         } else void this.commitWaypoint(v.stop)
         return
       }
@@ -270,6 +329,22 @@ export class Runtime {
     this.proposal = null
   }
 
+  /** Driver cancels the accepted rest stop: remove the navi waypoint and its geofence. */
+  cancelWaypoint() {
+    const stop = this.waypoint
+    if (!stop) return
+    this.waypoint = null
+    this.arrivedAt = null
+    void this.bus.removeWaypoint?.()
+    this.timeline.push({
+      t: this.bus.read().t,
+      level: 0,
+      title: `경유지 취소 · ${stop.name}`,
+      detail: 'NaviHelper.removeWaypoint로 경유지를 지웠습니다. 졸음 위험이 커지면 다시 제안합니다.',
+      actions: [],
+    })
+  }
+
   startNap(minutes = 20) {
     this.execute(this.orch.startNap(this.bus.read().t, minutes))
     this.waypoint = null
@@ -316,6 +391,9 @@ export class Runtime {
       probes: this.fatigue.probes.slice(-8),
       speaking: this.speaking,
       stats: { ...this.stats },
+      trip: this.trip,
+      recent: this.recent,
+      arrivedAt: this.arrivedAt,
     }
   }
 

@@ -287,24 +287,29 @@ def main():
         '네이티브: Kotlin `KkaeumNative` 브릿지: 차량 신호를 1Hz로 엔진에 전달, 엔진의 개입 명령을 SDK 호출로 변환하고 모든 호출을 **SDK Call Trace**로 기록.',
         '개인정보: 졸음 추론은 **전부 온디바이스**. 음성 원본·위치는 서버로 보내지 않음(선택 기능인 AI 리포트만 요약 수치 전송).',
     ])
-    b.h('Pleos Connect SDK / API 사용 계획')
+    b.h('Pleos Connect SDK / API 연동 현황 (에뮬레이터 2.1.0 실기 검증)')
     b.table(
-        ['SDK / API', '사용 API (실제 시그니처)', '용도'],
+        ['SDK / API', '사용 API (실제 시그니처)', '깨움에서의 쓰임'],
         [
-            ['Vehicle · HVAC', 'setHvacRecirculation, setHvacTemperature, setHvacFanSpeed, registerHvacRecirculation', 'CO₂ 트윈 입력, 외기 전환·온도·송풍 개입'],
-            ['Vehicle · Light', 'setAmbientLightSwitch / Brightness / BrightnessColor', '각성(청백)·경고(앰버)·수면(웜톤)·기상 조명'],
-            ['Vehicle · Seat', 'setHvacSeatVentilation, moveSeatBackrestAngle(MoveControl), 착좌 조회', '통풍 개입, 파워냅 리클라인, 탑승 인원'],
-            ['Vehicle · Safety', 'getTelltalesInfo() → DRIVER_ATTENTION, PARKING_BRAKE', '차량 주의경고 융합, 정차 확인'],
-            ['Vehicle · SteeringWheel / Odometer / Window', 'registerSteeringWheelAngle, 트립 주행시간, setWindowPosition', '단조로움 지표, 연속운전, 환기'],
-            ['CarPropertyManager (AAOS)', 'PERF_VEHICLE_SPEED, GEAR_SELECTION', '주행/정차 맥락 판단'],
-            ['NaviHelper', 'addWaypoint(RequestWaypointInfo(...FIRST)), 목적지 정보 리스너', '예측 쉼터 경유지 추가, 남은 시간'],
-            ['TextToSpeech / SpeechToText', 'speak / startListening (onBeginningOfSpeech)', '음성 안내, 퀴즈 응답, 음성 반응속도(PVT) 측정'],
-            ['FusedLocation', 'requestLocationUpdates', '경로 진행·지역 콘텐츠'],
-            ['Gleo Interface', 'assets/schema.json 3개 함수 + APP_ACTION_RESPONSE', 'Gleo AI 음성비서에서 깨움 기능 호출'],
+            ['Vehicle · HVAC', 'setHvacPower / Recirculation / Temperature / FanSpeed / FanDirection, register*Listener (내기·송풍·온도)', 'CO₂ 트윈 입력, 외기 전환·냉풍·얼굴 방향 송풍, 이벤트 기반 상태 동기화'],
+            ['Vehicle · Seat / SteeringWheel', 'setHvacSeatVentilation, 시트·핸들 열선 조회·끄기, moveSeatBackrestAngle, 요추 지지 펄스', '통풍 각성, 졸음 유발 온열 해제, 파워냅 리클라인(원위치 복원), 촉각 각성'],
+            ['Vehicle · Light / Window', '앰비언트 색·밝기, 실내등, 윈도 블라인드, 스마트글라스', '각성·경고·수면·기상 조명, 파워냅 차광'],
+            ['Vehicle · Safety / Body', '텔테일 리스너(DRIVER_ATTENTION·주차브레이크), 전조등, 와이퍼, 크루즈, 브레이크', '차량 DAW 융합, 야간·우천 가중치, 크루즈 단조로움, 정차 확인'],
+            ['Vehicle · EV / Trip', 'EV SOC, 주행가능거리, 트립 주행시간', '배터리 30% 미만 시 충전 겸 휴식 우선, 연속운전 시간'],
+            ['CarPropertyManager (AAOS)', 'PERF_VEHICLE_SPEED, GEAR_SELECTION, 외기온, DMS 졸음 벤더 속성(지원 차량)', '주행/정차 맥락, DMS 탑재 차량은 카메라 졸음 신호 직접 융합'],
+            ['NaviHelper', 'addWaypoint / removeWaypoint, requestTrip → onTripInfo, onTBTInfo, onCautionPointInfo, onNavigationStatus, 주변 충전소 화면', '실제 경로 ETA·도착 시 배터리, 회전 직전 개입 보류, 사고다발·안개 구간 사전 경고'],
+            ['FusedLocation', 'requestLocationUpdates, addProximityAlert(ENTER/EXIT)', '경로 진행 추적, 쉼터 도착·출발 자동 기록(지오펜스)'],
+            ['TextToSpeech / SpeechToText', 'speak + 이벤트 리스너 / startListening', '음성 안내, 퀴즈 응답, 음성 반응속도(PVT)'],
+            ['Gleo Interface', 'schema.json 4개 함수(상태·쉼터 추가·쉼터 취소·파워냅) + APP_ACTION_RESPONSE', 'Gleo 음성비서에서 깨움 호출 (에뮬레이터 응답 확인)'],
+            ['Pleos Fleet API', 'Webhook Periodic Data·Vehicle event 수신기, REST 토큰 플로우(/auth/client/token)', '법인·렌터카 관제: 차량별 졸음 엔진을 서버에서 실행'],
         ],
-        widths=[3.3, 7.4, 5.3],
-        size=7.8,
+        widths=[3.3, 7.2, 5.5],
+        size=7.4,
     )
+    b.bullets([
+        '**연동 불가 항목과 사유**: 운전자 오디오존 지정(시스템 전용 API), Fleet REST 실데이터(Pleos Fleet 계약 후 키 발급, 코드는 완료), Vehicle Data API(유럽 전용·별도 심사), Platform SDK DMS(특권 앱 전용, 벤더 속성으로 대체 구독), LLM SDK(2026.10 서비스 종료 공지).',
+        '에뮬레이터 미지원(DMS·스마트글라스·송풍 방향)은 capability 확인 후 건너뛰고, 실차에서는 같은 코드로 자동 활성화.',
+    ])
     b.h('플랫폼 정책 준수 & 리스크 대응')
     b.bullets([
         '주의분산: 주행 중 애니메이션·스크롤 없음, 1~2초 내 파악 가능한 정보만, 버튼 96dp 이상, 음성 우선(Pleos “Easy & Safe”). 가로/세로 창 모두 지원, CCP 뒤로가기 시 moveTaskToBack.',
