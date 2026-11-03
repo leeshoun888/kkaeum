@@ -18,6 +18,8 @@
     <uses-permission android:name="pleos.car.permission.CAR_WINDOWS" />
     <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />
     <uses-permission android:name="pleos.car.permission.CAR_SAFETY" />
+    <!-- getTelltalesInfo (DRIVER_ATTENTION) is refused without it on emulator 2.1.0; needs App Market review on vehicles. -->
+    <uses-permission android:name="pleos.car.permission.PRIVATE_CAR_SAFETY" />
 
     <!-- Pleos Vehicle SDK 2.3.2: control. App Market pre-approval required; every call degrades gracefully. -->
     <uses-permission android:name="pleos.car.permission.CONTROL_CAR_CLIMATE" />

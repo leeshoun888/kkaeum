@@ -61,7 +61,7 @@ class MainActivity : ComponentActivity() {
         SdkTrace.sink = channel::pushTrace
 
         vehicle = VehicleGateway(this) { collector.isParked() }
-        collector = SignalCollector(vehicle.vehicle, channel::pushSignals)
+        collector = SignalCollector(vehicle.vehicle, channel::pushSignals, vehicle::readArea)
         navi = NaviGateway(
             this,
             onRoute = { km, eta ->

@@ -72,9 +72,11 @@ class VoiceGateway(
     private fun initTts(barrier: Barrier) {
         val call = "TextToSpeech.initialize(${if (hybrid) "HYBRID" else "ON_DEVICE"})"
         try {
-            tts.addEventListener(ttsEvents)
             tts.initialize(object : TtsInit {
                 override fun onSuccess() {
+                    // The SDK's engine is bound inside initialize(); adding the listener earlier throws
+                    // "lateinit property tts has not been initialized" (seen on Pleos Connect emulator 2.1.0).
+                    runCatching { tts.addEventListener(ttsEvents) }.onFailure { SdkTrace.fail("TextToSpeech.addEventListener", it) }
                     runCatching { tts.setLocale(Locale.KOREA) }
                     runCatching { tts.setAudioAttributes(focus.attributes) }
                     ttsReady = true

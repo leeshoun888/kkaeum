@@ -74,6 +74,18 @@ class VehicleGateway(context: Context, private val isParked: () -> Boolean) {
         runCatching { vehicle.release() }
     }
 
+    /**
+     * The area a getter must be called with, as reported by the capability check. On Pleos Connect 2.1.0
+     * recirculation is a whole-cabin area and fan speed a front-row area, so a driver-only SeatArea fails.
+     */
+    fun readArea(kind: String): SeatArea? = when (kind) {
+        "recirculation", "ac" -> recircAreas.pickDriver()
+        "fan" -> fanBounds.keys.pickDriver()
+        "temperature" -> tempBounds.keys.pickDriver()
+        "seatVent" -> seatVentBounds.keys.pickDriver()
+        else -> null
+    }
+
     // ---- capabilities -------------------------------------------------------------------------------------
 
     /** Number of [Barrier.arrive] calls [probe] will make. */
@@ -233,8 +245,22 @@ class VehicleGateway(context: Context, private val isParked: () -> Boolean) {
         val b = fanBounds.getValue(area)
         val v = level.coerceIn(b.minValue, b.maxValue)
         val call = "HVAC.setHvacFanSpeed(${area.label()}, $v)"
-        hvac.setHvacFanSpeed(area, v, { _: SeatArea?, _: Int? -> SdkTrace.ok(call) }, { e -> SdkTrace.fail(call, e) })
+        withHvacPower(area) {
+            hvac.setHvacFanSpeed(area, v, { _: SeatArea?, _: Int? -> SdkTrace.ok(call) }, { e -> SdkTrace.fail(call, e) })
+        }
         return true
+    }
+
+    /**
+     * Fan speed is NOT_AVAILABLE while the climate system is off (emulator 2.1.0: PropertyAsyncError code 2),
+     * so switch HVAC power on first when needed. Any failure falls through to the original call.
+     */
+    private fun withHvacPower(area: SeatArea, then: () -> Unit) {
+        hvac.getHvacPowerState(area, { on: Boolean? ->
+            if (on == true) return@getHvacPowerState then()
+            val call = "HVAC.setHvacPower(${area.label()}, true)"
+            hvac.setHvacPower(area, true, { _: SeatArea?, _: Boolean? -> SdkTrace.ok(call); then() }, { e -> SdkTrace.fail(call, e); then() })
+        }, { _ -> then() })
     }
 
     private fun setSeatVentilation(level: Int): Boolean {

@@ -17,6 +17,7 @@ import android.os.Handler
 import android.os.Looper
 import com.kkaeum.copilot.util.SdkTrace
 import com.kkaeum.copilot.util.errorName
+import com.kkaeum.copilot.util.label
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
@@ -30,7 +31,12 @@ import kotlin.math.sqrt
  * parking brake, outside temp), LocationGateway (position/heading) and NaviGateway (remaining km / ETA),
  * which write through [put]. Only keys that have a real value are sent: the web keeps its defaults otherwise.
  */
-class SignalCollector(private val vehicle: Vehicle, private val push: (String) -> Unit) {
+class SignalCollector(
+    private val vehicle: Vehicle,
+    private val push: (String) -> Unit,
+    /** Capability-reported area per signal (see VehicleGateway.readArea); null → driver seat. */
+    private val areaFor: (String) -> SeatArea? = { null },
+) {
 
     private val main = Handler(Looper.getMainLooper())
     private val values = ConcurrentHashMap<String, Any>()
@@ -131,12 +137,16 @@ class SignalCollector(private val vehicle: Vehicle, private val push: (String) -
 
     private fun pollVehicle() {
         val hvac = vehicle.getHVAC()
-        read<Float>("HVAC.getHvacTemperature(driver, CELSIUS)", "setTempC") { ok, fail -> hvac.getHvacTemperature(DRIVER, TemperatureUnit.CELSIUS, ok, fail) }
-        read<Float>("HVAC.getHvacTemperatureCurrent(driver, CELSIUS)", "cabinTempC") { ok, fail -> hvac.getHvacTemperatureCurrent(DRIVER, TemperatureUnit.CELSIUS, ok, fail) }
-        read<Boolean>("HVAC.getHvacRecirculationState(driver)", "recirculation") { ok, fail -> hvac.getHvacRecirculationState(DRIVER, ok, fail) }
-        read<Int>("HVAC.getHvacFanSpeed(driver)", "fanSpeed") { ok, fail -> hvac.getHvacFanSpeed(DRIVER, ok, fail) }
-        read<Boolean>("HVAC.getHvacAcState(driver)", "acOn") { ok, fail -> hvac.getHvacAcState(DRIVER, ok, fail) }
-        read<Int>("Seat.getHvacSeatVentilationState(driver)", "seatVentDriver") { ok, fail -> vehicle.getSeat().getHvacSeatVentilationState(DRIVER, ok, fail) }
+        val temp = areaFor("temperature") ?: DRIVER
+        val recirc = areaFor("recirculation") ?: DRIVER
+        val fan = areaFor("fan") ?: DRIVER
+        val vent = areaFor("seatVent") ?: DRIVER
+        read<Float>("HVAC.getHvacTemperature(${temp.label()}, CELSIUS)", "setTempC") { ok, fail -> hvac.getHvacTemperature(temp, TemperatureUnit.CELSIUS, ok, fail) }
+        read<Float>("HVAC.getHvacTemperatureCurrent(${temp.label()}, CELSIUS)", "cabinTempC") { ok, fail -> hvac.getHvacTemperatureCurrent(temp, TemperatureUnit.CELSIUS, ok, fail) }
+        read<Boolean>("HVAC.getHvacRecirculationState(${recirc.label()})", "recirculation") { ok, fail -> hvac.getHvacRecirculationState(recirc, ok, fail) }
+        read<Int>("HVAC.getHvacFanSpeed(${fan.label()})", "fanSpeed") { ok, fail -> hvac.getHvacFanSpeed(fan, ok, fail) }
+        read<Boolean>("HVAC.getHvacAcState(${recirc.label()})", "acOn") { ok, fail -> hvac.getHvacAcState(recirc, ok, fail) }
+        read<Int>("Seat.getHvacSeatVentilationState(${vent.label()})", "seatVentDriver") { ok, fail -> vehicle.getSeat().getHvacSeatVentilationState(vent, ok, fail) }
         read<Int>("Window.getCurrentWindowPosition(ROW_1_LEFT)", "windowOpenPct") { ok, fail -> vehicle.getWindow().getCurrentWindowPosition(DRIVER_WINDOW, ok, fail) }
 
         // UNCERTAIN units (undocumented): trip time assumed minutes, distance assumed km.
