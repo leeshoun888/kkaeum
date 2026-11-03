@@ -163,12 +163,12 @@ const C_PASSENGER = new THREE.Color('#5AB8FF')
  * ════════════════════════════════════════════════════════════════════════ */
 
 const HALF_L = 2.42
-const BELT_Y = 1.05
-const SQ_N = 4.2 // superellipse exponent of the cross-section (higher = boxier)
+const BELT_Y = 1.15
+const SQ_N = 6.5 // superellipse exponent of the cross-section (higher = boxier: flat IONIQ 5 flanks)
 const WHEEL_X = [1.54, -1.595]
 const WHEEL_Y = 0.385
 const WHEEL_R = 0.385
-const ARCH_R = 0.5
+const ARCH_R = 0.48
 const TRACK_Z = 0.855
 
 /** Fritsch–Carlson monotone cubic interpolation (no overshoot on the roofline). */
@@ -215,23 +215,31 @@ function monotone(xs: number[], ys: number[]) {
 
 // Roofline, rear → front (x ascending): upright hatch with a lip spoiler, long flat roof,
 // fast windscreen, short clamshell hood falling to a blunt, squared nose.
+// Side elevation of the IONIQ 5 (mm from the front bumper, height), measured off a true side photo
+// scaled by its 737 mm tyres and the 845 / 3,000 / 790 mm overhang-wheelbase split:
+// tail (4,635, 860) · lamp band (4,600, 980) · raked rear glass (4,430, 1,185)→(3,950, 1,545) ·
+// roof to the lip spoiler (3,800, 1,585)–(2,300, 1,600) · header (1,950, 1,585) · cowl (1,100, 1,140) ·
+// rising clamshell hood (700, 1,020)→(80, 860) · nose (0, 800). Model: x = 2.42 − mm·0.001044, y = mm·0.001044.
 const TOP_PTS: [number, number][] = [
-  [-2.42, 1.2],
-  [-2.405, 1.42],
-  [-2.36, 1.59],
-  [-2.27, 1.652],
-  [-1.6, 1.668],
-  [-0.4, 1.675],
-  [0.02, 1.664],
-  [0.28, 1.6],
-  [0.58, 1.455],
-  [0.92, 1.262],
-  [1.22, 1.104],
-  [1.45, 1.074],
-  [1.85, 1.046],
-  [2.24, 1.012],
-  [2.37, 0.976],
-  [2.42, 0.94],
+  [-2.42, 0.86],
+  [-2.405, 0.94],
+  [-2.382, 1.023],
+  [-2.309, 1.107],
+  [-2.205, 1.237],
+  [-1.913, 1.482],
+  [-1.704, 1.613],
+  [-1.547, 1.655],
+  [-1.2, 1.672],
+  [-0.712, 1.676],
+  [0.019, 1.67],
+  [0.384, 1.655],
+  [0.645, 1.514],
+  [0.958, 1.336],
+  [1.272, 1.19],
+  [1.689, 1.065],
+  [2.055, 0.971],
+  [2.336, 0.898],
+  [2.42, 0.835],
 ]
 const topAt = monotone(
   TOP_PTS.map((p) => p[0]),
@@ -243,23 +251,24 @@ function archTop(dx: number) {
   const a = Math.abs(dx)
   if (a >= ARCH_R) return -Infinity
   const flat = ARCH_R * 0.6
-  if (a <= flat) return WHEEL_Y + ARCH_R * 0.98
+  if (a <= flat) return WHEEL_Y + ARCH_R * 0.92
   const f = (a - flat) / (ARCH_R - flat)
-  return WHEEL_Y + ARCH_R * (0.98 - 0.5 * Math.pow(f, 1.6))
+  return WHEEL_Y + ARCH_R * (0.92 - 0.55 * Math.pow(f, 1.5))
 }
 
 function botAt(x: number) {
-  let b = 0.4 + 0.1 * sstep(2.05, 2.42, x) + 0.12 * sstep(1.95, 2.42, -x)
+  // sill cladding ≈ 210 mm; front lip 260 mm (17.5° approach); rear bumper 400 mm (25.4° departure)
+  let b = 0.22 + 0.06 * sstep(2.0, 2.42, x) + 0.2 * sstep(1.9, 2.42, -x)
   for (const cx of WHEEL_X) b = Math.max(b, archTop(x - cx))
   return b
 }
 const widthAt = (x: number) => 0.985 * (1 - 0.07 * sstep(1.55, 2.42, x) - 0.04 * sstep(1.7, 2.42, -x))
-const tumble = (y: number) => 1 - 0.15 * sstep(BELT_Y, 1.7, y)
+const tumble = (y: number) => 1 - 0.27 * sstep(BELT_Y - 0.02, 1.62, y)
 
 function profile(x: number) {
   const ax = Math.min(1, Math.abs(x) / HALF_L)
   // The hatch is almost flat (high exponent); the nose rounds off a little more.
-  const e = x < 0 ? 26 : 22
+  const e = x < 0 ? 34 : 22
   const sh = Math.max(0.02, Math.sqrt(1 - Math.pow(ax, e)))
   const sw = Math.max(0.02, Math.sqrt(1 - Math.pow(ax, x < 0 ? 14 : 12)))
   const top = topAt(x)
@@ -367,7 +376,7 @@ function buildFeatureLines() {
   const dloTop = (x: number) => topAt(x) - 0.07
   let xf = 0.2
   for (let x = 0.2; x < 1.4; x += 0.005) if (dloTop(x) > BELT_Y + 0.03) xf = x
-  const xr = -2.12
+  const xr = -1.3
 
   for (const side of [-1, 1]) {
     // Beltline (straight, IONIQ 5 keeps it flat to the hatch)
@@ -380,10 +389,7 @@ function buildFeatureLines() {
     for (let x = xf; x >= xr; x -= 0.03) dlo.push(onSide(x, Math.max(BELT_Y + 0.025, dloTop(x)), side))
     pushPath(strong, dlo, true)
     // B pillar (paired) and the broad C pillar ahead of the quarter glass
-    for (const [px, w] of [
-      [-0.22, 0.045],
-      [-1.5, 0.11],
-    ] as const) {
+    for (const [px, w] of [[-0.16, 0.045]] as const) {
       for (const off of [-w, w]) {
         const x = px + off
         const pl: THREE.Vector3[] = []
@@ -394,16 +400,16 @@ function buildFeatureLines() {
     }
     // Clamshell hood shut line: wraps from the nose along the fender to the A-pillar base
     const clam: THREE.Vector3[] = []
-    for (let x = 2.32; x >= 1.2; x -= 0.03) clam.push(onSide(x, topAt(x) - 0.045, side))
+    for (let x = 2.32; x >= 1.27; x -= 0.03) clam.push(onSide(x, topAt(x) - 0.045, side))
     pushPath(strong, clam)
     // Diagonal "Z" character line across the doors (low at the front door, rising toward the rear arch)
-    line(strong, 0.98, 0.6, -1.1, 0.96, side, 40)
-    line(faint, -1.1, 0.96, -1.42, 0.96, side, 8)
+    line(strong, 1.05, 0.52, -1.1, 0.9, side, 40)
+    line(faint, -1.1, 0.9, -1.2, 0.9, side, 4)
     // Door shut lines
     for (const [x0, x1] of [
-      [0.98, 0.92],
-      [-0.22, -0.24],
-      [-1.27, -1.33],
+      [1.07, 1.02],
+      [-0.16, -0.18],
+      [-1.06, -1.3],
     ] as const)
       line(faint, x0, 0.47, x1, BELT_Y - 0.02, side, 12)
     // Squared wheel arches with their black cladding edge
@@ -417,34 +423,37 @@ function buildFeatureLines() {
       pushPath(strong, arch)
     }
     // Rocker / lower cladding
-    line(faint, -1.05, 0.5, 1.0, 0.5, side, 30)
+    line(faint, -1.05, 0.34, 1.0, 0.34, side, 30)
     // Side mirror (on the door, just behind the A-pillar base)
-    const mz = side * (sideZ(1.12, 1.12) + 0.02)
+    const mz = side * (sideZ(1.2, 1.2) + 0.02)
     const mo = side * 0.17
     const m = [
-      [1.2, 1.1, mz],
-      [1.2, 1.21, mz],
-      [1.08, 1.22, mz + mo],
-      [1.06, 1.12, mz + mo],
+      [1.26, 1.19, mz],
+      [1.26, 1.3, mz],
+      [1.14, 1.31, mz + mo],
+      [1.12, 1.21, mz + mo],
     ].map(([x, y, z]) => new THREE.Vector3(x, y, z))
     pushPath(strong, m, true)
   }
 
   // Rear lip spoiler across the roof end
   const sp: THREE.Vector3[] = []
-  for (let z = -0.72; z <= 0.72; z += 0.06) sp.push(new THREE.Vector3(-2.345, 1.655, z))
+  for (let z = -0.72; z <= 0.72; z += 0.06) sp.push(new THREE.Vector3(-1.66, 1.665, z))
+  pushPath(strong, sp)
+  sp.length = 0
+  for (let z = -0.72; z <= 0.72; z += 0.06) sp.push(new THREE.Vector3(-1.86, 1.6, z))
   pushPath(strong, sp)
   // Tailgate glass bottom and the black pixel-lamp band
-  for (const y of [1.2, 1.065, 0.94]) {
+  for (const y of [1.2, 1.08, 0.96]) {
     const pts: THREE.Vector3[] = []
     for (let z = -0.84; z <= 0.84; z += 0.04) pts.push(new THREE.Vector3(faceX(y, z, false) - 0.004, y, z))
     pushPath(y === 1.2 ? strong : faint, pts)
   }
   // Front: clamshell leading edge and the lower intake
   for (const [y, w, arr] of [
-    [0.93, 0.84, strong],
-    [0.62, 0.6, faint],
-    [0.5, 0.66, faint],
+    [0.865, 0.82, strong],
+    [0.56, 0.6, faint],
+    [0.44, 0.66, faint],
   ] as const) {
     const pts: THREE.Vector3[] = []
     for (let z = -w; z <= w + 1e-6; z += 0.04) pts.push(new THREE.Vector3(faceX(y, z, true) + 0.004, y, z))
@@ -481,10 +490,10 @@ function lightBar(front: boolean) {
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) quad(y0 + r * (px + gap), dir * (z0 + c * (px + gap)))
   }
   for (const dir of [-1, 1]) {
-    if (front) cluster(0.82, 3, 0.52, 7, dir)
+    if (front) cluster(0.77, 3, 0.52, 7, dir)
     else {
-      cluster(1.0, 3, 0.5, 7, dir)
-      for (let z = -0.44; z <= 0.44 + 1e-6; z += px + gap) if (dir === 1) quad(1.023, z)
+      cluster(1.0, 2, 0.48, 8, dir)
+      for (let z = -0.42; z <= 0.42 + 1e-6; z += px + gap) if (dir === 1) quad(1.023, z)
     }
   }
   const g = new THREE.BufferGeometry()
@@ -835,22 +844,66 @@ function Body({ live, reduced }: { live: LiveRef; reduced: boolean }) {
 function Wheels({ live }: { live: LiveRef }) {
   const refs = useRef<(THREE.Group | null)[]>([])
   const parts = useMemo(() => {
-    const tire = new THREE.TorusGeometry(WHEEL_R - 0.085, 0.085, 18, 64)
-    const rim = new THREE.CylinderGeometry(0.2, 0.2, 0.05, 48, 1)
-    rim.rotateX(Math.PI / 2)
-    const spoke = new THREE.BoxGeometry(0.2, 0.026, 0.02)
-    spoke.translate(0.1, 0, 0)
+    // 255/45R20: Ø737 tyre (r 0.385), 20" rim (r 0.265), 255 mm tread (0.266) with low, square shoulders.
+    const prof = [
+      [0.262, -0.118],
+      [0.3, -0.13],
+      [0.352, -0.133],
+      [0.374, -0.124],
+      [0.384, -0.104],
+      [WHEEL_R, 0],
+      [0.384, 0.104],
+      [0.374, 0.124],
+      [0.352, 0.133],
+      [0.3, 0.13],
+      [0.262, 0.118],
+    ].map(([r, y]) => new THREE.Vector2(r, y))
+    const tire = new THREE.LatheGeometry(prof, 72)
+    tire.rotateX(Math.PI / 2)
+    // Aero rim face: outer lip ring, five V-pairs of slim spokes, an inner ring and the hub.
+    const rim = new THREE.RingGeometry(0.228, 0.262, 72)
+    const hub = new THREE.CircleGeometry(0.058, 36)
+    const inner = new THREE.RingGeometry(0.135, 0.152, 60)
+    // Swept blade, offset from the radius so 18 of them read as the IONIQ 5's turbine-style 20" wheel.
+    const spoke = new THREE.BoxGeometry(0.165, 0.014, 0.02)
+    spoke.translate(0.15, 0.028, 0)
+    const barrel = new THREE.CylinderGeometry(0.262, 0.262, 0.22, 48, 1, true)
+    barrel.rotateX(Math.PI / 2)
     const ringPts: number[] = []
     for (let k = 0; k <= 96; k++) {
       const a = (k / 96) * Math.PI * 2
-      ringPts.push(Math.cos(a) * 0.235, Math.sin(a) * 0.235, 0)
+      ringPts.push(Math.cos(a) * 0.262, Math.sin(a) * 0.262, 0)
     }
     const ring = new THREE.BufferGeometry()
     ring.setAttribute('position', new THREE.Float32BufferAttribute(ringPts, 3))
+    // Holographic outline of the 18 swept turbine blades (both edges), the inner ring and the hub.
+    const bladePts: number[] = []
+    for (let k = 0; k < 18; k++) {
+      for (const edge of [0, 0.075]) {
+        let prev: [number, number] | null = null
+        for (let t = 0; t <= 1.0001; t += 0.125) {
+          const r = 0.07 + t * 0.165
+          const a = (k / 18) * Math.PI * 2 + edge + t * 0.55
+          const pt: [number, number] = [Math.cos(a) * r, Math.sin(a) * r]
+          if (prev) bladePts.push(prev[0], prev[1], 0, pt[0], pt[1], 0)
+          prev = pt
+        }
+      }
+    }
+    for (const r of [0.058, 0.145]) {
+      for (let k = 0; k < 48; k++) {
+        const a0 = (k / 48) * Math.PI * 2
+        const a1 = ((k + 1) / 48) * Math.PI * 2
+        bladePts.push(Math.cos(a0) * r, Math.sin(a0) * r, 0, Math.cos(a1) * r, Math.sin(a1) * r, 0)
+      }
+    }
+    const blades = new THREE.BufferGeometry()
+    blades.setAttribute('position', new THREE.Float32BufferAttribute(bladePts, 3))
+    const bladeMat = new THREE.LineBasicMaterial({ color: '#3CF2C8', transparent: true, opacity: 0.38, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })
     const tireMat = new THREE.MeshStandardMaterial({ color: '#07090d', roughness: 0.6, metalness: 0.2 })
-    const rimMat = new THREE.MeshStandardMaterial({ color: '#1a2230', roughness: 0.25, metalness: 0.9 })
+    const rimMat = new THREE.MeshStandardMaterial({ color: '#1a2230', roughness: 0.25, metalness: 0.9, side: THREE.DoubleSide })
     const ringMat = new THREE.LineBasicMaterial({ color: '#3CF2C8', transparent: true, opacity: 0.7, toneMapped: false })
-    return { tire, rim, spoke, ring, tireMat, rimMat, ringMat }
+    return { tire, rim, hub, inner, spoke, barrel, ring, blades, tireMat, rimMat, ringMat, bladeMat }
   }, [])
   useEffect(
     () => () => {
@@ -863,6 +916,8 @@ function Wheels({ live }: { live: LiveRef }) {
     for (const g of refs.current) if (g) g.rotation.z = -L.wheelAngle
     parts.ringMat.color.copy(L.rim)
     parts.ringMat.opacity = 0.7 * L.rimGain
+    parts.bladeMat.color.copy(L.rim)
+    parts.bladeMat.opacity = 0.38 * L.rimGain
   })
   const spots: [number, number][] = []
   for (const x of WHEEL_X) for (const s of [-1, 1]) spots.push([x, s])
@@ -871,12 +926,16 @@ function Wheels({ live }: { live: LiveRef }) {
       {spots.map(([x, s], i) => (
         <group key={i} position={[x, WHEEL_Y, s * TRACK_Z]}>
           <mesh geometry={parts.tire} material={parts.tireMat} />
-          <group ref={(el) => void (refs.current[i] = el)} position={[0, 0, s * 0.03]}>
+          <mesh geometry={parts.barrel} material={parts.rimMat} />
+          <group ref={(el) => void (refs.current[i] = el)} position={[0, 0, s * 0.1]}>
             <mesh geometry={parts.rim} material={parts.rimMat} />
-            {[0, 1, 2, 3, 4].map((k) => (
-              <mesh key={k} geometry={parts.spoke} material={parts.rimMat} rotation={[0, 0, (k / 5) * Math.PI * 2]} position={[0, 0, s * 0.03]} />
+            <mesh geometry={parts.inner} material={parts.rimMat} />
+            <mesh geometry={parts.hub} material={parts.rimMat} />
+            {Array.from({ length: 18 }, (_, k) => (
+              <mesh key={k} geometry={parts.spoke} material={parts.rimMat} rotation={[0, 0, (k / 18) * Math.PI * 2 * -s]} scale={[1, s, 1]} />
             ))}
-            <lineLoop geometry={parts.ring} material={parts.ringMat} position={[0, 0, s * 0.045]} />
+            <lineLoop geometry={parts.ring} material={parts.ringMat} position={[0, 0, s * 0.012]} />
+            <lineSegments geometry={parts.blades} material={parts.bladeMat} position={[0, 0, s * 0.014]} scale={[1, s, 1]} />
           </group>
         </group>
       ))}
@@ -1348,13 +1407,21 @@ function TwinCanvas({ hero, reduced, active }: { hero: boolean; reduced: boolean
       dpr={[1, 2]}
       gl={{ antialias: false, alpha: false, powerPreference: 'high-performance', stencil: false }}
       camera={{ position: camPos, fov: hero ? 30 : 32, near: 0.1, far: 60 }}
-      onCreated={({ gl }) => gl.setClearColor(0x000000, 1)}
+      onCreated={({ gl, camera, controls }) => {
+        gl.setClearColor(0x000000, 1)
+        // Design-review hook (tools/emu/twin.cjs): lets a script place the camera for reference views.
+        ;(globalThis as { __twin?: Record<string, unknown> }).__twin = { ...((globalThis as { __twin?: Record<string, unknown> }).__twin ?? {}), camera, controls }
+      }}
       // Opaque black + screen blending = visually transparent: black drops out, light adds onto
       // the host panel. Avoids premultiplied-alpha halos that bloom produces on alpha canvases.
       style={{ background: '#000', mixBlendMode: 'screen' }}
     >
       <Scene reduced={reduced} hero={hero} />
       <OrbitControls
+        ref={(c) => {
+          const g = globalThis as { __twin?: Record<string, unknown> }
+          if (c) g.__twin = { ...(g.__twin ?? {}), controls: c }
+        }}
         makeDefault
         target={[0, hero ? 0.75 : 0.85, 0]}
         enableDamping
